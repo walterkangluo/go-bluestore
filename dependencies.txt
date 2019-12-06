@@ -1,0 +1,7 @@
+# Imported packages that does not exsit under "vendor" folder.
+# The following lines listed by git repositories(each line for one git repo) 
+# alone with compatible version(branch/tag/commit-id).
+
+#github.com/user/proj1:master
+#github.com/user/proj2:master
+
