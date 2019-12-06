@@ -1,0 +1,36 @@
+################################################################################
+#
+#   SECTION: log
+#
+#   - This section define log setting
+#
+################################################################################
+logging:
+
+  # Define the timestamp field format globally
+  timeFieldFormat: "2006-01-02 15:04:05.000"
+
+  console:
+    enabled: false
+    # Define log level, which in { 0: debug, 1: info, 2: warn, 3: error, 4: fatal, 5: panic, 6: disable}
+    level: 1
+    # Define log print formation, which is json ot text
+    format: text
+    # Define whether to show caller info in log output
+    caller: true
+    # Define whether to show hostname info in log output
+    hostname: true
+
+
+  file:
+    enabled: true
+    # Define log output file path, in absolute path
+    path: /var/log/bluestore/bluestore.log
+    # Define log level, which in { 0: debug, 1: info, 2: warn, 3: error, 4: fatal, 5: panic, 6: disable}
+    level: 0
+    # Define log print formation, which is json ot text
+    format: text
+    # Define whether to show caller info in log output
+    caller: true
+    # Define whether to show hostname info in log output
+    hostname: false
