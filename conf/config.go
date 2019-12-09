@@ -3,7 +3,6 @@ package conf
 import (
 	"fmt"
 	"github.com/spf13/viper"
-	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,11 +98,7 @@ func GetLogSetting(conf *viper.Viper) log.Config {
 		ShowCaller:   logConsoleCaller,
 		ShowHostname: logConsoleHostname,
 	}
-	//tools.EnsureFolderExist(logFilePath[0:strings.LastIndex(logFilePath, "/")])
-	//logfile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
-	//if err != nil {
-	//	panic(err)
-	//}
+
 	fileAppender := &log.Appender{
 		Enabled:      logFileEnabled,
 		LogLevel:     log.Level(logFileLevel),
@@ -116,13 +111,29 @@ func GetLogSetting(conf *viper.Viper) log.Config {
 	}
 
 	logConfig := log.Config{
-		Enabled:         logConsoleEnabled || logFileEnabled,
+		Enabled:         true,
 		Provider:        log.GetGlobalConfig().Provider,
-		GlobalLogLevel:  log.Level(uint8(math.Max(float64(logConsoleLevel), float64(logFileLevel)))),
 		TimeFieldFormat: logTimestampFormat,
-		Appenders:       map[string]*log.Appender{ConsoleLogAppender: consoleAppender, FileLogAppender: fileAppender},
-		OutputFlags:     log.GetOutputFlags(),
 	}
+
+	if logConsoleEnabled {
+		if logFileEnabled {
+			panic("can not set console and file at the same time. ")
+		}
+
+		logConfig.OutputFlags = log.GetOutputFlags()
+		logConfig.GlobalLogLevel = log.Level(uint8(float64(logConsoleLevel)))
+		logConfig.Appenders = map[string]*log.Appender{ConsoleLogAppender: consoleAppender}
+	} else {
+		if !logFileEnabled {
+			panic("choose from one of console or file at least. ")
+		}
+
+		logConfig.OutputFlags = log.GetOutputFlags()
+		logConfig.GlobalLogLevel = log.Level(uint8(float64(logFileLevel)))
+		logConfig.Appenders = map[string]*log.Appender{FileLogAppender: fileAppender}
+	}
+
 	return logConfig
 }
 

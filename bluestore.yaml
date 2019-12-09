@@ -8,7 +8,7 @@
 logging:
 
   # Define the timestamp field format globally
-  timeFieldFormat: "2006-01-02 15:04:05.000"
+  timeFieldFormat: "2006-01-02 15:04:05.000000"
 
   console:
     enabled: false
@@ -29,7 +29,7 @@ logging:
     # Define log level, which in { 0: debug, 1: info, 2: warn, 3: error, 4: fatal, 5: panic, 6: disable}
     level: 0
     # Define log print formation, which is json ot text
-    format: text
+    format: json
     # Define whether to show caller info in log output
     caller: true
     # Define whether to show hostname info in log output

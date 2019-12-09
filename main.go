@@ -30,5 +30,5 @@ func main() {
 	fmt.Printf("pares config %v.", config)
 
 	InitLog(config.Logger)
-	log.Info("init log bluestore success.")
+	log.Debug("init log bluestore success.")
 }
