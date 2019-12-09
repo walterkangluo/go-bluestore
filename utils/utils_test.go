@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 var TestExistDir = "/etc"
@@ -50,5 +50,3 @@ func TestIsFile(t *testing.T) {
 	dir = IsFile(TestExistFile)
 	assert.True(dir)
 }
-
-

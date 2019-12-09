@@ -70,7 +70,7 @@ func NewBlueStoreConfig() BlueStoreConfig {
 	config := LoadConfig()
 
 	return BlueStoreConfig{
-		Logger:GetLogSetting(config),
+		Logger: GetLogSetting(config),
 	}
 }
 
@@ -136,4 +136,3 @@ func GetLogSetting(conf *viper.Viper) log.Config {
 
 	return logConfig
 }
-
