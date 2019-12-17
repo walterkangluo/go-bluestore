@@ -1,6 +1,25 @@
 {
 	"comment": "",
 	"ignore": "test",
-	"package": [],
+	"package": [
+		{
+			"checksumSHA1": "Rb3o9Xg8D63V6CcAs917DDo23xQ=",
+			"path": "github.com/rs/zerolog",
+			"revision": "f1dd50b8c64d79be1392edf1d8fda5cedea4916d",
+			"revisionTime": "2019-11-19T00:31:13Z"
+		},
+		{
+			"checksumSHA1": "T/AhC59StnifUNDvcFu94LFgnG4=",
+			"path": "github.com/rs/zerolog/internal/cbor",
+			"revision": "f1dd50b8c64d79be1392edf1d8fda5cedea4916d",
+			"revisionTime": "2019-11-19T00:31:13Z"
+		},
+		{
+			"checksumSHA1": "g+F94Nkg/Z40NvgDI/H3kmHHQ24=",
+			"path": "github.com/rs/zerolog/internal/json",
+			"revision": "f1dd50b8c64d79be1392edf1d8fda5cedea4916d",
+			"revisionTime": "2019-11-19T00:31:13Z"
+		}
+	],
 	"rootPath": "github.com/go-bluestore"
 }
