@@ -23,5 +23,7 @@ profile.tmp
 profile.cov
 coverage.txt
 
+go-bluestore
+
 # tmp
 *.sw?
