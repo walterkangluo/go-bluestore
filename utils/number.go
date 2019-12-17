@@ -1,7 +1,6 @@
 package utils
 
 func ISP2(x int64) bool {
-
 	return (x & (x - 1)) == 0
 }
 
