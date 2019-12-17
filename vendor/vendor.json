@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "CSPbwbyzqA6sfORicn4HFtIhF/c=",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "d8f796af33cc11cb798c1aaeb27a4ebc5099927d",
+			"revisionTime": "2018-08-30T19:11:22Z"
+		},
+		{
 			"checksumSHA1": "ek05bLURic4T9fEd9iE048jQzYw=",
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "4bf2d1fec78374803a39307bfb8d340688f4f28e",
@@ -141,22 +147,34 @@
 			"revisionTime": "2019-12-06T16:23:59Z"
 		},
 		{
+			"checksumSHA1": "fPm5TYeFK5plsKwrFwra+CCPlF0=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "f35b8ab0b5a2cef36673838d662e249dd9c94686",
+			"revisionTime": "2018-05-06T18:05:49Z"
+		},
+		{
 			"checksumSHA1": "MZ4JU44HUXZ4JB+oxYrw9wpaOZU=",
 			"path": "github.com/subosito/gotenv",
 			"revision": "de67a6614a4de71ad5e380b6946e56ab957d58c5",
 			"revisionTime": "2019-09-17T10:36:37Z"
 		},
 		{
+			"checksumSHA1": "igQSWuUMHLb7aOCp0wOKSH9ocQ4=",
 			"path": "golang.org/x/sys/unix",
-			"revision": ""
+			"revision": "a34e9553db1e492c9a76e60db2296ae7e5fbb772",
+			"revisionTime": "2019-02-28T12:11:59Z"
 		},
 		{
+			"checksumSHA1": "o3YChxWLvyCmkAn/ZNBj9HC9zKw=",
 			"path": "golang.org/x/text/transform",
-			"revision": ""
+			"revision": "d14c52b222ee852cdba8b07206ca0c614b389876",
+			"revisionTime": "2019-02-21T13:47:49Z"
 		},
 		{
+			"checksumSHA1": "lBB8oUHgIK0RUuDchkQVfMXJQh0=",
 			"path": "golang.org/x/text/unicode/norm",
-			"revision": ""
+			"revision": "d14c52b222ee852cdba8b07206ca0c614b389876",
+			"revisionTime": "2019-02-21T13:47:49Z"
 		},
 		{
 			"checksumSHA1": "RbJ+tHifMXHFGEAtWl0gTBxUaD8=",
