@@ -2,7 +2,6 @@ package thread_pool
 
 import (
 	"github.com/go-bluestore/common"
-	"github.com/go-bluestore/lib"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -74,25 +73,18 @@ func TestPool_Submit(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(pool)
 
-	var processedFlag = 1
-	var lock = lib.NewSpinLock()
+	var com = make(chan int)
 	err = pool.Submit(func() {
-		lock.Lock()
-		processedFlag = 2
-		lock.Unlock()
+		com <- 2
+		return
 	})
-
-	time.Sleep(time.Second)
-	lock.Lock()
-	assert.Equal(2, processedFlag)
-	lock.Unlock()
-
-	err = pool.Submit(func() {
-		pool.lock.Lock()
-		processedFlag = 3
-		pool.lock.Unlock()
-	})
-	assert.Error(ErrPoolClosed, err)
+	ch := <- com
+	assert.Equal(2, ch)
 
 	pool.Release()
+	err = pool.Submit(func() {
+		com <- 3
+		return
+	})
+	assert.Error(ErrPoolClosed, err)
 }
