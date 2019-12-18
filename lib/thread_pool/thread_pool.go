@@ -293,5 +293,3 @@ func (p *Pool) revertWorker(worker *worker) bool {
 	p.lock.Unlock()
 	return true
 }
-
-

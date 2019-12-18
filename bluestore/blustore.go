@@ -1,19 +1,13 @@
 package bluestore
 
-import "github.com/go-bluestore/bluestore/common"
+import (
+	"github.com/go-bluestore/bluestore/common/bluestore"
+	"github.com/go-bluestore/bluestore/common/hobject"
+)
 
-type AioContext struct {
-}
-
-type TransContext struct {
-	AioContext
-}
-
-type BlueStore struct {
-	common.ObjectStore
-	common.BlueFSDeviceExpander
-	common.Md_config_obs_t
-
-	ac AioContext
-	tc TransContext
+type SbInfoT struct {
+	oidS       []hobject.GhObject
+	sb         bluestore.SharedBlob
+	refMap     bluestore.BlueStoreExtentRefMapT
+	compressed bool
 }

@@ -7,11 +7,11 @@ import "time"
 
 type loopQueue struct {
 	// worker record
-	items  []*worker
+	items []*worker
 	// expiry array
 	expiry []*worker
 	// queue head
-	head   int32
+	head int32
 	// queue tail
 	tail   int32
 	size   int32

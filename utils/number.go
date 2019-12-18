@@ -6,7 +6,7 @@ func ISP2(x int64) bool {
 
 func ROUND_UP_TO(n int64, d int64) int64 {
 	if n%d != 0 {
-		return n + d - n % d
+		return n + d - n%d
 	}
 	return n
 }

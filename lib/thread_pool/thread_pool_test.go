@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 var DefaultPoolName = "test_pool"
 
 func TestNewThreadPool(t *testing.T) {
@@ -78,7 +77,7 @@ func TestPool_Submit(t *testing.T) {
 		com <- 2
 		return
 	})
-	ch := <- com
+	ch := <-com
 	assert.Equal(2, ch)
 
 	pool.Release()

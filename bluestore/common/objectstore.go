@@ -1,5 +1,4 @@
 package common
 
-type ObjectStore struct{
-
+type ObjectStore struct {
 }

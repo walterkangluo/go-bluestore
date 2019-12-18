@@ -22,7 +22,6 @@ func TestROUND_UP_TO(t *testing.T) {
 	assert.Equal(int64(8), a)
 }
 
-
 func TestDIV_ROUND_UP(t *testing.T) {
 	assert := assert.New(t)
 
