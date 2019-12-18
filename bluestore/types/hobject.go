@@ -1,8 +1,6 @@
-package hobject
+package types
 
 import (
-	"github.com/go-bluestore/bluestore/common/object"
-	"github.com/go-bluestore/bluestore/common/types"
 	"math"
 )
 
@@ -14,14 +12,14 @@ var (
 	poolTempStart = int64(-2)
 
 	NoGen   = genT(math.MaxUint32)
-	NoShard = types.ShardIdT{
+	NoShard = ShardIdT{
 		Id: int8(-1),
 	}
 )
 
 type hObject struct {
-	Oid    object.ObjectT
-	Snap   object.SnapId
+	Oid    ObjectT
+	Snap   SnapId
 	Pool   int64
 	NSpace string
 
@@ -63,7 +61,7 @@ func isMetaPool(pool int64) bool {
 type GhObject struct {
 	hObj       hObject
 	generation genT
-	shareId    types.ShardIdT
+	shareId    ShardIdT
 	max        bool
 }
 
@@ -84,7 +82,7 @@ func CreateGhObject1(object hObject) *GhObject {
 	}
 }
 
-func CreateGhObject3(object hObject, gen genT, shared types.ShardIdT) *GhObject {
+func CreateGhObject3(object hObject, gen genT, shared ShardIdT) *GhObject {
 	return &GhObject{
 		hObj:       object,
 		generation: gen,
@@ -93,10 +91,10 @@ func CreateGhObject3(object hObject, gen genT, shared types.ShardIdT) *GhObject 
 	}
 }
 
-func MakePgMeta(pool int64, hash uint32, shared types.ShardIdT) *GhObject {
+func MakePgMeta(pool int64, hash uint32, shared ShardIdT) *GhObject {
 	h := hObject{
-		Oid: *new(object.ObjectT),
-		Snap: object.SnapId{
+		Oid: *new(ObjectT),
+		Snap: SnapId{
 			Val: math.MaxUint64,
 		},
 		hash: hash,

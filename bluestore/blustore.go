@@ -1,13 +1,12 @@
 package bluestore
 
 import (
-	"github.com/go-bluestore/bluestore/common/bluestore"
-	"github.com/go-bluestore/bluestore/common/hobject"
+	"github.com/go-bluestore/bluestore/types"
 )
 
 type SbInfoT struct {
-	oidS       []hobject.GhObject
-	sb         bluestore.SharedBlob
-	refMap     bluestore.BlueStoreExtentRefMapT
+	oidS       []types.GhObject
+	sb         types.SharedBlob
+	refMap     types.BlueStoreExtentRefMapT
 	compressed bool
 }

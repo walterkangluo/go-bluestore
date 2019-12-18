@@ -1,8 +1,4 @@
-package bluestore_types
-
-import (
-	"github.com/go-bluestore/bluestore/common/formatter"
-)
+package types
 
 const FlagOmp = uint8(1)
 
@@ -62,7 +58,7 @@ func (bo *BlueStoreOnode) clearOmapFlag() {
 	bo.clearFlags(FlagOmp)
 }
 
-func (bo *BlueStoreOnode) dump(f formatter.Formatter) {
+func (bo *BlueStoreOnode) dump(f Formatter) {
 
 }
 

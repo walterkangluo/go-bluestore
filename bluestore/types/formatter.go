@@ -1,4 +1,4 @@
-package formatter
+package types
 
 type Formatter struct {
 }

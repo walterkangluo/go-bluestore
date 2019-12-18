@@ -1,8 +1,6 @@
-package bluefs
+package types
 
 import (
-	bdv "github.com/go-bluestore/bluestore/common/blockdevice"
-	ctx "github.com/go-bluestore/bluestore/common/ceph_context"
 	"github.com/go-bluestore/log"
 )
 
@@ -17,12 +15,12 @@ type BlueFSDeviceExpander struct {
 }
 
 type BlueFS struct {
-	cct             *ctx.CephContext
+	cct             *CephContext
 	slowDevExpander BlueFSDeviceExpander
-	bdev            map[uint8]bdv.BlockDevice
+	bdev            map[uint8]BlockDevice
 }
 
-func CreateBlueFS(cct *ctx.CephContext) *BlueFS {
+func CreateBlueFS(cct *CephContext) *BlueFS {
 	blueFs := &BlueFS{
 		cct: cct,
 	}
@@ -36,5 +34,5 @@ func (bf *BlueFS) setSlowDeviceExpander(bfe BlueFSDeviceExpander) {
 func (bf *BlueFS) addBlockDevice(deviceId uint8, devPath string) {
 	log.Debug("bdev id %d and path %s.", deviceId, devPath)
 
-	bdv.CreateBlockDevice(bf.cct, devPath)
+	CreateBlockDevice(bf.cct, devPath)
 }

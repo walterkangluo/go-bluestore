@@ -1,11 +1,6 @@
-package bluestore
+package types
 
 import (
-	"github.com/go-bluestore/bluestore/common"
-	"github.com/go-bluestore/bluestore/common/bluefs"
-	types "github.com/go-bluestore/bluestore/common/bluestore_types"
-	ctx "github.com/go-bluestore/bluestore/common/ceph_context"
-	"github.com/go-bluestore/bluestore/common/config"
 	"sync"
 )
 
@@ -44,7 +39,7 @@ func (be *BlueStoreExtentRefMapT) Empty() bool {
 }
 
 type Cache struct {
-	cct        *ctx.CephContext
+	cct        *CephContext
 	numExtents uint64
 	numBlobs   uint64
 }
@@ -158,16 +153,16 @@ type TransContext struct {
 }
 
 type BlueStore struct {
-	common.ObjectStore
-	bluefs.BlueFSDeviceExpander
-	config.MdConfigT
+	ObjectStore
+	BlueFSDeviceExpander
+	MdConfigT
 
 	ac AioContext
 	tc TransContext
 }
 
 type Onode struct {
-	onode         types.BlueStoreOnode
+	onode         BlueStoreOnode
 	exists        bool
 	nref          int
 	flushingCount int
