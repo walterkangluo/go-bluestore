@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/go-bluestore/log"
@@ -113,4 +114,9 @@ func EnsureFolderExist(folderPath string) {
 			panic(errMsg)
 		}
 	}
+}
+
+func Hex2Bytes(str string) []byte {
+	h, _ := hex.DecodeString(str)
+	return h
 }

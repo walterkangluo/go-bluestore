@@ -71,3 +71,32 @@ func (bf *BlueFsFnodeT) appendExtent(ext *BlueFsExtentT) {
 }
 
 // TODO: add other method
+
+type BlueFsSuperT struct {
+	uuid      UuidD
+	osdUuid   UuidD
+	version   uint64
+	blockSize uint32
+	logFnode  BlueFsFnodeT
+}
+
+func CreateBlueFsSuperT() *BlueFsSuperT {
+	return &BlueFsSuperT{
+		version:   uint64(0),
+		blockSize: uint32(4096),
+	}
+}
+
+func (bs *BlueFsSuperT) blockMask() uint64 {
+	return ^(uint64(bs.blockSize) - uint64(1))
+}
+
+type BlueFsTransactionT struct {
+	Uuid UuidD
+	Seq  uint64
+	opBl BufferList
+}
+
+func (bt *BlueFsTransactionT) Empty() bool {
+	return bt.opBl.Length() == 0
+}

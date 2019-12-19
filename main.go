@@ -26,6 +26,7 @@ func InitLog(config log.Config) {
 }
 
 func main() {
+
 	config := conf.NewBlueStoreConfig()
 	fmt.Printf("pares config %v.", config)
 
