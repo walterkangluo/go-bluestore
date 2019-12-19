@@ -4,7 +4,7 @@ import (
 	"github.com/go-bluestore/log"
 )
 
-var (
+const (
 	BdevWal  = 0
 	BdevDb   = 1
 	BdevSlow = 2

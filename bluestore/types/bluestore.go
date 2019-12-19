@@ -4,8 +4,14 @@ import (
 	"sync"
 )
 
-var (
-	BypassCleanCache = 0x1
+const (
+	BypassCleanCache           = 0x1
+	StateFsAllocated           = 0
+	StateFsStored              = 1
+	StateFsCompressedOriginal  = 2
+	StateFsCompressed          = 3
+	StateFsCompressedAllocated = 4
+	StateFsLast                = 5
 )
 
 type BuffSpace struct {
@@ -189,4 +195,43 @@ func (on *Onode) Put() {
 	if 0 == on.nref {
 		on = new(Onode)
 	}
+}
+
+type volatileStatFs struct {
+	values [StateFsLast]int64
+}
+
+func CreateVolatileStateFs() *volatileStatFs {
+	return &volatileStatFs{}
+}
+
+func (vs *volatileStatFs) allocated() int64 {
+	return vs.values[StateFsAllocated]
+}
+
+func (vs *volatileStatFs) stored() int64 {
+	return vs.values[StateFsStored]
+}
+
+func (vs *volatileStatFs) compressedOriginal() int64 {
+	return vs.values[StateFsCompressedOriginal]
+}
+
+func (vs *volatileStatFs) compressed() int64 {
+	return vs.values[StateFsCompressed]
+}
+
+func (vs *volatileStatFs) compressedAllocated() int64 {
+	return vs.values[StateFsCompressedAllocated]
+}
+
+func (vs *volatileStatFs) isEmpty() bool {
+	if vs.values[StateFsAllocated] == int64(0) &&
+		vs.values[StateFsStored] == int64(0) &&
+		vs.values[StateFsCompressedOriginal] == int64(0) &&
+		vs.values[StateFsCompressed] == int64(0) &&
+		vs.values[StateFsCompressedAllocated] == int64(0) {
+		return true
+	}
+	return false
 }
