@@ -2,7 +2,7 @@ package bluestore
 
 import (
 	"github.com/go-bluestore/bluestore/types"
-	"github.com/go-bluestore/bluestore/types/bluefs"
+	"github.com/go-bluestore/bluestore/bluefs"
 	"sync"
 )
 
