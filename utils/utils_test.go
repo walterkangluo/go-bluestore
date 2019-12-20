@@ -84,3 +84,4 @@ func TestHex2Bytes(t *testing.T) {
 	assert.Equal(s.Servers[0].ServerName, ss.Servers[0].ServerName)
 	assert.Equal(s.Servers[1].ServerName, ss.Servers[1].ServerName)
 }
+
