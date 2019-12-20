@@ -1,5 +1,7 @@
 package types
 
+import "github.com/go-bluestore/bluestore/types"
+
 type BlueFsExtentT struct {
 	Bedv   uint8
 	Offset uint64
@@ -73,8 +75,8 @@ func (bf *BlueFsFnodeT) appendExtent(ext *BlueFsExtentT) {
 // TODO: add other method
 
 type BlueFsSuperT struct {
-	uuid      UuidD
-	osdUuid   UuidD
+	uuid      types.UuidD
+	osdUuid   types.UuidD
 	version   uint64
 	blockSize uint32
 	logFnode  BlueFsFnodeT
@@ -92,9 +94,9 @@ func (bs *BlueFsSuperT) blockMask() uint64 {
 }
 
 type BlueFsTransactionT struct {
-	Uuid UuidD
+	Uuid types.UuidD
 	Seq  uint64
-	opBl BufferList
+	opBl types.BufferList
 }
 
 func (bt *BlueFsTransactionT) Empty() bool {

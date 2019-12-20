@@ -1,5 +1,5 @@
 package types
 
 type CephContext struct {
-	conf MdConfigT
+	Conf MdConfigT
 }

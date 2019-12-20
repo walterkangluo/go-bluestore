@@ -58,3 +58,7 @@ func CreateBlockDevice(cct *CephContext, path string) *BlockDevice {
 func (*BlockDevice) Open(path string) {
 
 }
+
+func (bd *BlockDevice) GetSize() uint64 {
+	return uint64(1)
+}
