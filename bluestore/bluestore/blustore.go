@@ -13,7 +13,7 @@ type SbInfoT struct {
 }
 
 func (bs *BlueStore)ReadMeta(key string, value *string) int{
-
+	return 0
 }
 
 func (bs *BlueStore)mount(kvOnly bool) int{
@@ -33,6 +33,7 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 		return -5
 	}
 
+	return 0
 }
 
 func (bs *BlueStore)Mount() int{
