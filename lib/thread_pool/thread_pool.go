@@ -80,6 +80,57 @@ type Pool struct {
 	flags common.PoolFlags
 }
 
+type MempoolThread struct{
+	Pool
+}
+
+func (p *Pool)New(name string, size int32, flags common.PoolFlags) {
+
+	if size <= 0 {
+		return
+	}
+
+	enableExpiry := true
+	if expiry := flags.ExpiryDuration; expiry < 0 {
+		return
+	} else if expiry == 0 {
+		enableExpiry = false
+	}
+
+	if _, exist := PoolRecords[name]; exist {
+		return
+	}
+
+	p.name = name
+	p.capacity = size
+	p.lock = lib.NewSpinLock()
+	p.flags = flags
+
+	p.workerCache.New = func() interface{} {
+		return &worker{
+			pool: p,
+			task: make(chan func(), WorkerChanCap),
+		}
+	}
+
+	if flags.PreAlloc {
+		p.workers = newWorkerArray(common.LoopQueueType, size)
+	} else {
+		p.workers = newWorkerArray(common.StackType, 0)
+	}
+
+	p.cond = sync.NewCond(p.lock)
+
+	if enableExpiry {
+		// Start a goroutine to clean up expired workers periodically.
+		go p.periodicallyPurge()
+	}
+
+	// Add to record
+	PoolRecords[name] = p
+	return
+}
+
 func NewThreadPool(name string, size int32, flags common.PoolFlags) (*Pool, error) {
 
 	if size <= 0 {

@@ -3,6 +3,7 @@ package bluestore
 import (
 	"github.com/go-bluestore/bluestore/bluefs"
 	"github.com/go-bluestore/bluestore/types"
+	"github.com/go-bluestore/lib/thread_pool"
 	"sync"
 )
 
@@ -167,6 +168,10 @@ type BlueStore struct {
 
 	Path string
 	KvOnly bool
+	Mounted bool
+	Fsid types.UuidD
+	BlueFS *bluefs.BlueFS
+	MemPoolThread *thread_pool.MempoolThread
 }
 
 type ONode struct {

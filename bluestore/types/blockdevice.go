@@ -62,3 +62,7 @@ func (*BlockDevice) Open(path string) {
 func (bd *BlockDevice) GetSize() uint64 {
 	return uint64(1)
 }
+
+func (bd *BlockDevice) GetBlockSize() uint32 {
+	return uint32(1)
+}
