@@ -165,14 +165,14 @@ type BlueStore struct {
 	bluefs.BlueFSDeviceExpander
 	types.MdConfigT
 
-	ac AioContext
-	tc TransContext
+	Path string
+	KvOnly bool
 }
 
-type Onode struct {
-	onode         types.BlueStoreOnode
+type ONode struct {
+	oNode         types.BlueStoreOnode
 	exists        bool
-	nref          int
+	nRef          int
 	flushingCount int
 	flushLock     sync.Mutex
 	flushCond     *sync.Cond
@@ -180,22 +180,22 @@ type Onode struct {
 	// extentMap ExtentMap
 }
 
-func CreateOnode() *Onode {
-	return &Onode{}
+func CreateONode() *ONode {
+	return &ONode{}
 }
 
-func (on *Onode) Flush() {
+func (on *ONode) Flush() {
 
 }
 
-func (on *Onode) Get() {
-	on.nref++
+func (on *ONode) Get() {
+	on.nRef++
 }
 
-func (on *Onode) Put() {
-	on.nref--
-	if 0 == on.nref {
-		on = new(Onode)
+func (on *ONode) Put() {
+	on.nRef--
+	if 0 == on.nRef {
+		on = new(ONode)
 	}
 }
 
