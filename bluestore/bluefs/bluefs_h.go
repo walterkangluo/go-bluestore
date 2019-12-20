@@ -2,7 +2,7 @@ package bluefs
 
 import (
 	"github.com/go-bluestore/bluestore/allocator"
-	bfst "github.com/go-bluestore/bluestore/bluefs/types"
+	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/log"
 	"sync"
@@ -25,7 +25,7 @@ type BlueFSDeviceExpander struct {
 type File struct {
 	types.RefCountedObject
 
-	fnode    bfst.BlueFsFnodeT
+	fnode    btypes.BlueFsFnodeT
 	refs     int
 	dirtySeq uint64
 	locked   bool
@@ -117,6 +117,21 @@ func CreateFileLock(_file fileRef) *FileLock {
 	}
 }
 
+type blockInfo struct {
+	start uint64
+	len   uint64
+}
+
+func (bi blockInfo) getStart() uint64 {
+	return bi.start
+}
+
+func (bi blockInfo) getLen() uint64 {
+	return bi.len
+}
+
+type blockInfoList []blockInfo
+
 type BlueFS struct {
 	Cct *types.CephContext
 
@@ -125,12 +140,12 @@ type BlueFS struct {
 	dirMap  map[string]dirRef
 	fileMap map[uint64]fileRef
 	//TODO: dirtyFiles dirty_file_list unknown
-	super        bfst.BlueFsSuperT
+	super        btypes.BlueFsSuperT
 	inoLast      uint64
 	logSeq       uint64
 	logSeqStable uint64
 	logWriter    *FileWriter
-	logT         bfst.BlueFsTransactionT
+	logT         btypes.BlueFsTransactionT
 	logFlushing  bool
 	logCond      sync.Cond
 	newLogJumpTo uint64
@@ -145,8 +160,8 @@ type BlueFS struct {
 	 */
 	bdev           []*types.BlockDevice
 	ioc            types.IOContext
-	blockAll       uint64
-	alloc          []*allocator.Allocator
+	blockAll       []blockInfoList
+	alloc          []allocator.Allocator
 	allocSize      []uint64
 	pendingRelease []uint64
 
