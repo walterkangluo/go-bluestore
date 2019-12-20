@@ -49,6 +49,12 @@ func initLogger(bfs *BlueFS) {
 
 }
 
+func (bfs *BlueFS) allocate(id uint8, len uint64, node *btypes.BlueFsFnodeT) int {
+	log.Debug("len %d form device type %d", len, id)
+
+	return 0
+}
+
 func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 	log.Debug("osd uuid is %v", osdUuid.UUID)
 
@@ -68,5 +74,6 @@ func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 	var logFile fileRef
 	logFile.fnode.Ino = uint64(1)
 	logFile.fnode.PreferBdev = BdevWal
+
 	return 0
 }

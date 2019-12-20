@@ -30,7 +30,7 @@ func (bs *BlueStore)openFsid(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore)readFsid(uuid types.UuidD) int {
+func (bs *BlueStore)readFsid(uuid *types.UuidD) int {
 	return 0
 }
 
@@ -160,7 +160,7 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 		goto outPath
 	}
 
-	r = bs.readFsid(&bs.Fsid)
+	r = bs.readFsid(bs.Fsid)
 	if r < 0{
 		goto outFsid
 	}
