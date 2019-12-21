@@ -3,7 +3,6 @@ package bluestore
 import (
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
-	"github.com/go-bluestore/lib/thread_pool"
 	"github.com/go-bluestore/log"
 )
 
@@ -147,7 +146,7 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 	}
 
 	if bs.Cct.Conf.OsdMaxObjectSize > ObjectMaxSize{
-		log.Error("osd_max_object_size %u > bluestore max", bs.Cct.Conf.OsdMaxObjectSize)
+		log.Error("osd_max_object_size %d > bluestore max", bs.Cct.Conf.OsdMaxObjectSize)
 		return -22
 	}
 
@@ -218,7 +217,7 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 		goto outStop
 	}
 
-	bs.MemPoolThread.New("bstore_mempool", 10, 0)
+	bs.MemPoolThread.New("bstore_mempool", 10, common.PoolFlags{})
 
 	bs.Mounted = true
 

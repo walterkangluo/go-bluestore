@@ -50,12 +50,12 @@ func initLogger(bfs *BlueFS) {
 }
 
 func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) int {
-	log.Debug("len %d form device type %d", len, id)
+	log.Debug("len %d form device type %d", l, id)
 
 	utils.AssertTrue(int(id) < len(bfs.alloc))
 
 	if nil != bfs.alloc[id] {
-		hInt := uint64(0)
+		//hInt := uint64(0)
 	}
 
 	return 0
