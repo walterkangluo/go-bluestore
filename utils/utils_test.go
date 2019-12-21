@@ -85,3 +85,13 @@ func TestHex2Bytes(t *testing.T) {
 	assert.Equal(s.Servers[1].ServerName, ss.Servers[1].ServerName)
 }
 
+func TestEnsureFolderExist(t *testing.T) {
+	var aa []int
+	type H struct {
+		a int
+	}
+	var mm []H
+	s := len(aa)
+	n := len(mm)
+}
+

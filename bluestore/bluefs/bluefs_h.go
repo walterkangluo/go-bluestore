@@ -171,6 +171,11 @@ type BlueFS struct {
 func CreateBlueFS(cct *types.CephContext) *BlueFS {
 	blueFs := &BlueFS{
 		Cct: cct,
+		bdev: make([]*types.BlockDevice, 0),
+		blockAll: make([]blockInfoList, 0),
+		alloc: make([]allocator.Allocator, 0),
+		allocSize:make([]uint64, 0),
+		pendingRelease: make([]uint64, 0),
 	}
 	return blueFs
 }

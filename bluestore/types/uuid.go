@@ -1,6 +1,8 @@
 package types
 
-import "github.com/satori/go.uuid"
+import (
+	"github.com/satori/go.uuid"
+)
 
 type UuidD struct {
 	uuid.UUID
@@ -11,5 +13,6 @@ func GenerateRandomUuid() UuidD {
 	if nil != err {
 		panic("generate uuid error")
 	}
+
 	return UuidD{u2}
 }
