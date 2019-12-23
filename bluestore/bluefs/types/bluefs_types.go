@@ -1,6 +1,9 @@
 package types
 
-import "github.com/go-bluestore/bluestore/types"
+import (
+	"github.com/go-bluestore/bluestore/types"
+	ctypes "github.com/go-bluestore/common/types"
+)
 
 type BlueFsExtentT struct {
 	Bedv   uint8
@@ -20,7 +23,7 @@ func (be *BlueFsExtentT) End() uint64 {
 	return be.Offset + uint64(be.Length)
 }
 
-func (be *BlueFsExtentT) Equal(b *BlueFsExtentT) bool {
+func (be BlueFsExtentT) Equal(b *BlueFsExtentT) bool {
 
 	if be.Length == b.Length && be.Offset == b.Offset && be.Bedv == b.Bedv {
 		return true
@@ -33,43 +36,43 @@ type BlueFsFnodeT struct {
 	Size uint64
 	//mtime time.Time
 	PreferBdev uint8
-	Extents    []BlueFsExtentT
+	Extents    *ctypes.Vector // BlueFsExtentT
 	Allocated  uint64
 }
 
 func CreateBlueFsFnodeT() *BlueFsFnodeT {
-	return &BlueFsFnodeT{
+	bf := &BlueFsFnodeT{
 		Ino:        uint64(0),
 		Size:       uint64(0),
 		PreferBdev: uint8(0),
 		Allocated:  uint64(0),
 	}
+	bf.Extents.Init()
+	return bf
 }
 
-func (bf *BlueFsFnodeT) getAllocated() uint64 {
+func (bf *BlueFsFnodeT) GetAllocated() uint64 {
 	return bf.Allocated
 }
 
-func (bf *BlueFsFnodeT) recalculateAllocated() {
+func (bf *BlueFsFnodeT) RecalculateAllocated() {
 	bf.Allocated = uint64(0)
 
-	for _, val := range bf.Extents {
-		bf.Allocated += uint64(val.Length)
+	for i := 0; i < bf.Extents.Size(); i++ {
+		bf.Allocated += uint64(bf.Extents.At(i).(BlueFsExtentT).Length)
 	}
+
 }
 
-func (bf *BlueFsFnodeT) appendExtent(ext *BlueFsExtentT) {
-	var key int
-	var val BlueFsExtentT
-
-	for key, val = range bf.Extents {
-		if val.Equal(ext) {
-			break
+func (bf *BlueFsFnodeT) AppendExtent(ext *BlueFsExtentT) {
+	for i := 0; i < bf.Extents.Size(); i++ {
+		if bf.Extents.At(i).(BlueFsExtentT).Equal(ext) {
+			return
 		}
 	}
 
-	bf.Allocated += uint64(val.Length)
-	bf.Extents[key] = *new(BlueFsExtentT)
+	bf.Allocated += uint64(ext.Length)
+	bf.Extents.PushBack(ext)
 }
 
 // TODO: add other method
@@ -96,9 +99,15 @@ func (bs *BlueFsSuperT) blockMask() uint64 {
 type BlueFsTransactionT struct {
 	Uuid types.UuidD
 	Seq  uint64
-	opBl types.BufferList
+	opBl ctypes.BufferList
 }
 
 func (bt *BlueFsTransactionT) Empty() bool {
 	return bt.opBl.Length() == 0
+}
+
+func (bt *BlueFsTransactionT) OpInit() {
+}
+
+func (bt *BlueFsTransactionT) OpAllocAdd(id uint, start uint64, len uint64) {
 }

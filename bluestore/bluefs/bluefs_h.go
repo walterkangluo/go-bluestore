@@ -1,9 +1,9 @@
 package bluefs
 
 import (
-	"github.com/go-bluestore/bluestore/allocator"
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	"github.com/go-bluestore/bluestore/types"
+	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
 	"sync"
 )
@@ -59,7 +59,7 @@ type FileReaderBuffer struct {
 	blOff       uint64
 	pos         uint64
 	maxPrefetch uint64
-	bl          types.BufferList
+	bl          ctypes.BufferList
 }
 
 func CreateFileReaderBuffer(mp uint64) *FileReaderBuffer {
@@ -122,11 +122,11 @@ type blockInfo struct {
 	len   uint64
 }
 
-func (bi blockInfo) getStart() uint64 {
+func (bi blockInfo) GetStart() uint64 {
 	return bi.start
 }
 
-func (bi blockInfo) getLen() uint64 {
+func (bi blockInfo) GetLen() uint64 {
 	return bi.len
 }
 
@@ -158,20 +158,27 @@ type BlueFS struct {
 	*	BDEV_WAL   db.wal/
 	*	BDEV_SLOW  db.slow/
 	 */
-	bdev           []*types.BlockDevice
-	ioc            types.IOContext
-	blockAll       []blockInfoList
-	alloc          []allocator.Allocator
-	allocSize      []uint64
-	pendingRelease []uint64
+	bdev           *ctypes.Vector   // *types.BlockDevice
+	ioc            *ctypes.Vector   // types.IOContext
+	blockAll       []*ctypes.Vector // []blockInfoList
+	blockTotal     *ctypes.Vector   // []uint64
+	alloc          *ctypes.Vector   // []allocator.Allocator
+	allocSize      *ctypes.Vector   // []uint64
+	pendingRelease *ctypes.Vector   // []uint64
 
 	slowDevExpander *BlueFSDeviceExpander
 }
 
-func CreateBlueFS(cct *types.CephContext) *BlueFS {
-	blueFs := &BlueFS{
-		Cct: cct,
-	}
+func CreateBlueFS(cct *types.CephContext) (blueFs *BlueFS) {
+	blueFs.Cct = cct
+
+	blueFs.blockAll = make([]*ctypes.Vector, 0)
+	blueFs.bdev.Init()
+	blueFs.ioc.Init()
+	blueFs.blockTotal.Init()
+	blueFs.alloc.Init()
+	blueFs.allocSize.Init()
+	blueFs.pendingRelease.Init()
 	return blueFs
 }
 
@@ -183,4 +190,12 @@ func (bf *BlueFS) addBlockDevice(deviceId uint8, devPath string) {
 	log.Debug("bdev id %d and path %s.", deviceId, devPath)
 
 	types.CreateBlockDevice(bf.Cct, devPath)
+}
+
+func getSuperOffset() uint64 {
+	return 4096
+}
+
+func getSuperLength() uint64 {
+	return 4096
 }

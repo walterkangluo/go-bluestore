@@ -80,11 +80,11 @@ type Pool struct {
 	flags common.PoolFlags
 }
 
-type MempoolThread struct{
+type MempoolThread struct {
 	Pool
 }
 
-func (p *Pool)New(name string, size int32, flags common.PoolFlags) {
+func (p *Pool) New(name string, size int32, flags common.PoolFlags) {
 
 	if size <= 0 {
 		return

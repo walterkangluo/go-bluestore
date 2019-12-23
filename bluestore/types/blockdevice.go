@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/lib/aio"
 	"sync"
 	"unsafe"
@@ -65,4 +66,7 @@ func (bd *BlockDevice) GetSize() uint64 {
 
 func (bd *BlockDevice) GetBlockSize() uint32 {
 	return uint32(1)
+}
+
+func (bd *BlockDevice) Write(off uint64, bl types.BufferList, buffered bool) {
 }

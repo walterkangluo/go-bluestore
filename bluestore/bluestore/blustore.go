@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
-	"github.com/go-bluestore/lib/thread_pool"
 	"github.com/go-bluestore/log"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
 	"os"
@@ -42,127 +41,132 @@ func (bs *BlueStore)ReadMeta(key string, value *string) int{
 func (bs *BlueStore)readBdevLabel(cct *types.CephContext, path string, label *btypes.BluestoreBdevLabelT) int {
 	log.Debug("")
 	/*
-	for fd, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);  fd. < 0; {
-		fd, _ = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0)
-	}*/
+		for fd, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);  fd. < 0; {
+			fd, _ = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0)
+		}*/
 
 	var file *os.File
 	for file, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);
-			err != nil && err == syscall.EINTR; file, err = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0){
+		err != nil && err == syscall.EINTR; file, err = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0) {
 	}
 	var bl types.BufferList
 	r := bl.ReadFd()
 
-	for err := file.Close(); err != nil && err == syscall.EINTR; err = file.Close(){
+	for err := file.Close(); err != nil && err == syscall.EINTR; err = file.Close() {
 	}
 
 	var crc, expected_crc uint32
-	defer func(){
-		if err := recover(); err != nil{
+	defer func() {
+		if err := recover(); err != nil {
 			log.Debug("unable to decode label at offset %s", )
 			fmt.Println(err)
 		}
 	}()
+
 	return 0
 }
 
-func (bs *BlueStore)openPath() int {
+func (bs *BlueStore) ReadMeta(key string, value *string) int {
 	return 0
 }
 
-func (bs *BlueStore)openFsid(create bool) int {
+func (bs *BlueStore) openPath() int {
 	return 0
 }
 
-func (bs *BlueStore)readFsid(uuid *types.UuidD) int {
+func (bs *BlueStore) openFsid(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore)lockFsid() int {
+func (bs *BlueStore) readFsid(uuid *types.UuidD) int {
 	return 0
 }
 
-func (bs *BlueStore)openBdev(create bool) int {
+func (bs *BlueStore) lockFsid() int {
 	return 0
 }
 
-func (bs *BlueStore)openDb(create bool) int {
+func (bs *BlueStore) openBdev(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore)openSuperMeta() int {
+func (bs *BlueStore) openDb(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore)openFm(create bool) int {
+func (bs *BlueStore) openSuperMeta() int {
 	return 0
 }
 
-func (bs *BlueStore)openAlloc() int {
+func (bs *BlueStore) openFm(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore)openCollections() int {
+func (bs *BlueStore) openAlloc() int {
 	return 0
 }
 
-func (bs *BlueStore)reloadLogger() int {
+func (bs *BlueStore) openCollections() int {
 	return 0
 }
 
-func (bs *BlueStore)reconcileBluefsFreespace() int {
+func (bs *BlueStore) reloadLogger() int {
 	return 0
 }
 
-func (bs *BlueStore)kvStart() int {
+func (bs *BlueStore) reconcileBluefsFreespace() int {
 	return 0
 }
 
-func (bs *BlueStore)deferredReplay() int {
+func (bs *BlueStore) kvStart() int {
 	return 0
 }
 
-func (bs *BlueStore)kvStop() int {
+func (bs *BlueStore) deferredReplay() int {
 	return 0
 }
 
-func (bs *BlueStore)flushCache() int {
+func (bs *BlueStore) kvStop() int {
 	return 0
 }
 
-func (bs *BlueStore)closeAlloc() int {
+func (bs *BlueStore) flushCache() int {
 	return 0
 }
 
-func (bs *BlueStore)closeFm() int {
+func (bs *BlueStore) closeAlloc() int {
 	return 0
 }
 
-func (bs *BlueStore)closeDb() int {
+func (bs *BlueStore) closeFm() int {
 	return 0
 }
 
-func (bs *BlueStore)closeBdev() int {
+func (bs *BlueStore) closeDb() int {
 	return 0
 }
 
-func (bs *BlueStore)closeFsid() int {
+func (bs *BlueStore) closeBdev() int {
 	return 0
 }
 
-func (bs *BlueStore)closePath() int {
+func (bs *BlueStore) closeFsid() int {
 	return 0
 }
 
-func (bs *BlueStore)fsck(deep bool, repair bool) int {
+func (bs *BlueStore) closePath() int {
 	return 0
 }
 
-func (bs *BlueStore)Fsck(deep bool)int{
+func (bs *BlueStore) fsck(deep bool, repair bool) int {
+	return 0
+}
+
+func (bs *BlueStore) Fsck(deep bool) int {
 	return bs.fsck(deep, false)
 }
 
-func (bs *BlueStore)mount(kvOnly bool) int{
+func (bs *BlueStore) mount(kvOnly bool) int {
 	log.Debug("path %s", bs.Path)
 
 	bs.KvOnly = kvOnly
@@ -179,78 +183,78 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 		return -5
 	}
 
-	if bs.Cct.Conf.BlueStoreFsckOnMount{
+	if bs.Cct.Conf.BlueStoreFsckOnMount {
 		rc := bs.Fsck(bs.Cct.Conf.BlueStoreFsckOnMountDeep)
-		if rc < 0{
+		if rc < 0 {
 			return rc
 		}
-		if rc > 0{
+		if rc > 0 {
 			log.Error("fsck found %d errors", rc)
 			return -5
 		}
 	}
 
-	if bs.Cct.Conf.OsdMaxObjectSize > ObjectMaxSize{
-		log.Error("osd_max_object_size %u > bluestore max", bs.Cct.Conf.OsdMaxObjectSize)
+	if bs.Cct.Conf.OsdMaxObjectSize > ObjectMaxSize {
+		log.Error("osd_max_object_size %d > bluestore max", bs.Cct.Conf.OsdMaxObjectSize)
 		return -22
 	}
 
 	r = bs.openPath()
-	if r < 0{
+	if r < 0 {
 		return r
 	}
 	r = bs.openFsid(false)
-	if r < 0{
+	if r < 0 {
 		goto outPath
 	}
 
 	r = bs.readFsid(bs.Fsid)
-	if r < 0{
+	if r < 0 {
 		goto outFsid
 	}
 
 	r = bs.openBdev(false)
-	if r < 0{
+	if r < 0 {
 		goto outFsid
 	}
 
 	r = bs.openDb(false)
-	if r < 0{
+	if r < 0 {
 		goto outBdev
 	}
 
-	if kvOnly{
+	if kvOnly {
 		return 0
 	}
 
 	r = bs.openSuperMeta()
-	if r < 0{
+	if r < 0 {
 		goto outDb
 	}
 
 	r = bs.openFm(false)
-	if r < 0{
+	if r < 0 {
 		goto outDb
 	}
 
 	r = bs.openAlloc()
-	if r < 0{
+	if r < 0 {
 		goto outFm
 	}
 
 	r = bs.openCollections()
-	if r < 0{
+	if r < 0 {
 		goto outAlloc
 	}
 
-	r = bs. reloadLogger()
-	if r < 0{
+	r = bs.reloadLogger()
+	if r < 0 {
 		goto outColl
 	}
 
-	if bs.BlueFS != nil{
+	if bs.BlueFS != nil {
 		r = bs.reconcileBluefsFreespace()
-		if r < 0{
+		if r < 0 {
 			goto outColl
 		}
 	}
@@ -262,7 +266,7 @@ func (bs *BlueStore)mount(kvOnly bool) int{
 		goto outStop
 	}
 
-	bs.MemPoolThread.New("bstore_mempool", 10, 0)
+	bs.MemPoolThread.New("bstore_mempool", 10, common.PoolFlags{})
 
 	bs.Mounted = true
 
@@ -287,6 +291,6 @@ outPath:
 	return r
 }
 
-func (bs *BlueStore)Mount() int{
+func (bs *BlueStore) Mount() int {
 	return bs.mount(false)
 }

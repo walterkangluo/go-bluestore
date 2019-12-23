@@ -12,8 +12,15 @@ func CreateBitmapAllocator(cct *types.CephContext, cap int64, allocUnit int64, n
 	}
 }
 
+/*
 func (sa *BitmapAllocator) Allocate(wantSize uint64, allocUnit uint64,
 	maxAllocSize uint64, hint int64, extents *btypes.PExtentVector) int64 {
+
+	return int64(0)
+}
+*/
+
+func (sa *BitmapAllocator) Allocate(para ...interface{}) int64 {
 
 	return int64(0)
 }
@@ -23,7 +30,7 @@ func (sa *BitmapAllocator) AllocateInit(wantSize uint64, allocUnit uint64,
 	return int64(0)
 }
 
-func (sa *BitmapAllocator) Release(releaseSet []uint64) {
+func (sa *BitmapAllocator) Release(releaseSet btypes.PExtentVector) {
 	return
 }
 

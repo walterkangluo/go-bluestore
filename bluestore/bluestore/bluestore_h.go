@@ -166,10 +166,11 @@ type BlueStore struct {
 	bluefs.BlueFSDeviceExpander
 	types.MdConfigT
 
-	KvOnly bool
-	Mounted bool
-	Fsid *types.UuidD
-	BlueFS *bluefs.BlueFS
+	KvOnly        bool
+	Mounted       bool
+	Fsid          *types.UuidD
+	BlueFS        *bluefs.BlueFS
+	Path          string
 	MemPoolThread *thread_pool.MempoolThread
 }
 
