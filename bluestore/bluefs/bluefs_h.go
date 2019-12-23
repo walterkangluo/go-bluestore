@@ -122,11 +122,11 @@ type blockInfo struct {
 	len   uint64
 }
 
-func (bi blockInfo) getStart() uint64 {
+func (bi blockInfo) GetStart() uint64 {
 	return bi.start
 }
 
-func (bi blockInfo) getLen() uint64 {
+func (bi blockInfo) GetLen() uint64 {
 	return bi.len
 }
 
@@ -158,13 +158,13 @@ type BlueFS struct {
 	*	BDEV_WAL   db.wal/
 	*	BDEV_SLOW  db.slow/
 	 */
-	bdev           *ctypes.Vector  // *types.BlockDevice
-	ioc            *ctypes.Vector  // types.IOContext
-	blockAll       []*ctypes.Vector  // []blockInfoList
-	blockTotal     *ctypes.Vector  // []uint64
-	alloc          *ctypes.Vector  // []allocator.Allocator
-	allocSize      *ctypes.Vector  // []uint64
-	pendingRelease *ctypes.Vector  // []uint64
+	bdev           *ctypes.Vector   // *types.BlockDevice
+	ioc            *ctypes.Vector   // types.IOContext
+	blockAll       []*ctypes.Vector // []blockInfoList
+	blockTotal     *ctypes.Vector   // []uint64
+	alloc          *ctypes.Vector   // []allocator.Allocator
+	allocSize      *ctypes.Vector   // []uint64
+	pendingRelease *ctypes.Vector   // []uint64
 
 	slowDevExpander *BlueFSDeviceExpander
 }
@@ -190,4 +190,12 @@ func (bf *BlueFS) addBlockDevice(deviceId uint8, devPath string) {
 	log.Debug("bdev id %d and path %s.", deviceId, devPath)
 
 	types.CreateBlockDevice(bf.Cct, devPath)
+}
+
+func getSuperOffset() uint64 {
+	return 4096
+}
+
+func getSuperLength() uint64 {
+	return 4096
 }

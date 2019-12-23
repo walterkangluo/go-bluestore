@@ -2,10 +2,13 @@ package utils
 
 import (
 	"bytes"
+	"crypto/md5"
+	"crypto/sha1"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/go-bluestore/log"
+	"hash/crc32"
 	"os"
 	"os/exec"
 	"os/user"
@@ -165,4 +168,47 @@ func (this *UUIDGenerator) Get() string {
 //获取uint32形式的UUID
 func (this *UUIDGenerator) GetUint32() uint32 {
 	return <-this.internalChan
+}
+
+// 生成md5
+func MD5String(str string) string {
+	c := md5.New()
+	c.Write([]byte(str))
+	return hex.EncodeToString(c.Sum(nil))
+}
+
+func MD5Byte(src []byte) []byte {
+	c := md5.New()
+	c.Write(src)
+
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+
+	return dst
+}
+
+//生成sha1
+func SHA1String(str string) string {
+	c := sha1.New()
+	c.Write([]byte(str))
+	return hex.EncodeToString(c.Sum(nil))
+}
+
+func SHA1Byte(src []byte) []byte {
+	c := sha1.New()
+	c.Write(src)
+
+	dst := make([]byte, hex.EncodedLen(len(src)))
+	hex.Encode(dst, src)
+
+	return dst
+}
+
+// crc32
+func CRC32String(str string) uint32 {
+	return crc32.ChecksumIEEE([]byte(str))
+}
+
+func CRC32Byte(src []byte) uint32 {
+	return crc32.ChecksumIEEE(src)
 }

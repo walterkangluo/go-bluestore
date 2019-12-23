@@ -66,3 +66,6 @@ func (bd *BlockDevice) GetSize() uint64 {
 func (bd *BlockDevice) GetBlockSize() uint32 {
 	return uint32(1)
 }
+
+func (bd *BlockDevice) Write(off uint64, bl BufferList, buffered bool) {
+}

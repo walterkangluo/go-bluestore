@@ -3,14 +3,14 @@ package types
 import "github.com/go-bluestore/common/types"
 
 type BlueStoreIntervalT struct {
-	offset uint64
-	length uint64
+	Offset uint64
+	Length uint64
 }
 
 func CreateBlueStoreIntervalT(o uint64, l uint64) *BlueStoreIntervalT {
 	return &BlueStoreIntervalT{
-		offset: o,
-		length: l,
+		Offset: o,
+		Length: l,
 	}
 }
 
@@ -21,8 +21,8 @@ type BluesStorePExtentT struct {
 func CreateBluesStorePExtentT2(o uint64, l uint64) *BluesStorePExtentT {
 	return &BluesStorePExtentT{
 		BlueStoreIntervalT{
-			offset: o,
-			length: l,
+			Offset: o,
+			Length: l,
 		},
 	}
 }

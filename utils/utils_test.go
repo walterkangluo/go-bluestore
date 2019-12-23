@@ -84,3 +84,33 @@ func TestHex2Bytes(t *testing.T) {
 	assert.Equal(s.Servers[0].ServerName, ss.Servers[0].ServerName)
 	assert.Equal(s.Servers[1].ServerName, ss.Servers[1].ServerName)
 }
+
+func TestMD5(t *testing.T) {
+	assert := assert.New(t)
+
+	var test = "Hello, World!"
+
+	md5 := MD5String(test)
+	assert.Equal("65a8e27d8879283831b664bd8b7f0ad4", md5)
+
+	sha1 := SHA1String(test)
+	assert.Equal("0a0a9f2a6772942557ab5355d76af442f8f65e01", sha1)
+
+	crc32 := CRC32String(test)
+	assert.Equal(uint32(3964322768), crc32)
+
+	testByte := "65a8e27d8879283831b664bd8b7f0ad4"
+	toByte := Hex2Bytes(testByte)
+	aa := MD5Byte(toByte)
+	expectAA := []byte{
+		54, 53, 97, 56, 101, 50, 55, 100, 56, 56, 55, 57, 50, 56, 51, 56,
+		51, 49, 98, 54, 54, 52, 98, 100, 56, 98, 55, 102, 48, 97, 100, 52,
+	}
+	assert.Equal(expectAA, aa)
+
+	bb := SHA1Byte(toByte)
+	assert.Equal(expectAA, bb)
+
+	cc := CRC32Byte(toByte)
+	assert.Equal(uint32(4041457148), cc)
+}

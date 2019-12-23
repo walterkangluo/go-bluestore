@@ -7,12 +7,14 @@ import (
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
+	"sync"
+	"syscall"
 )
 
 func initAlloc(bfs *BlueFS) {
-	bfs.alloc.ReSize(MaxBdev)           // make([]al.Allocator, MaxBdev)
- 	bfs.allocSize.ReSize(MaxBdev)       //  = make([]uint64, 0, MaxBdev)
-	bfs.pendingRelease.ReSize(MaxBdev)  // = make([]uint64, 0, MaxBdev)
+	bfs.alloc.ReSize(MaxBdev)          // make([]al.Allocator, MaxBdev)
+	bfs.allocSize.ReSize(MaxBdev)      //  = make([]uint64, 0, MaxBdev)
+	bfs.pendingRelease.ReSize(MaxBdev) // = make([]uint64, 0, MaxBdev)
 
 	if nil != bfs.bdev.At(BdevWal) {
 		bfs.allocSize.SetAt(BdevWal, bfs.Cct.Conf.BlueFsAllocSize) // = bfs.Cct.Conf.BlueFsAllocSize
@@ -44,10 +46,10 @@ func initAlloc(bfs *BlueFS) {
 		bfs.alloc.SetAt(id, allocator)
 		blockAll := bfs.blockAll[id]
 
-		for i := 0; i < blockAll.Size(); i ++ {
-			block := blockAll.At(i).(*blockInfo)
-			log.Debug("index %d and block start is %d and end is %d.", i, block.getStart(), block.getLen())
-			bfs.alloc.At(id).(al.Allocator).InitAddFree(block.getStart(), block.getLen())
+		for i := 0; i < blockAll.Size(); i++ {
+			block := blockAll.At(i).(blockInfo)
+			log.Debug("index %d and block start is %d and end is %d.", i, block.GetStart(), block.GetLen())
+			bfs.alloc.At(id).(al.Allocator).InitAddFree(block.GetStart(), block.GetLen())
 		}
 	}
 }
@@ -56,7 +58,7 @@ func initLogger(bfs *BlueFS) {
 
 }
 
-func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) int {
+func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) error {
 	log.Debug("len %d form device type %d", l, id)
 	utils.AssertTrue(int(id) < bfs.alloc.Size())
 	var extents types2.PExtentVector
@@ -76,27 +78,56 @@ func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) int {
 		if allocLen > 0 {
 			bfs.alloc.At(int(id)).(al.Allocator).Release(extents)
 		}
-	}
-
-	if id != BdevSlow {
-		if nil != bfs.bdev || 0 == bfs.bdev.Size() {
-			log.Error("failed to allocate %d on bdev %d, free %x, fallback to bdev %d.",
-				l, id, bfs.alloc.At(int(id)), id + 1)
+		if id != BdevSlow {
+			if nil != bfs.bdev.At(int(id)) {
+				log.Error("failed to allocate %d on bdev %d, free %x, fallback to bdev %d.",
+					l, id, bfs.alloc.At(int(id)), id+1)
+			}
+			return bfs.allocate(id+1, l, node)
 		}
-		return bfs.allocate(id + 1, l, node)
+
+		if nil != bfs.bdev.At(int(id)) {
+			log.Error("failed to allocate %x on bdev %d with free %d.",
+				l, id, bfs.alloc.At(int(id)).(al.Allocator).GetFree())
+		} else {
+			log.Error("failed to allocate %x on bdev %d.", l, id)
+		}
+
+		if nil != bfs.bdev.At(int(id)) {
+			bfs.alloc.At(int(id)).(al.Allocator).Dump()
+		}
+
+		return syscall.ENOSPC
 	}
 
-	if nil != bfs.bdev.At(int(id)) {
-		log.Error("failed to allocate %x on bdev %d with free %d.",
-			l, id, bfs.alloc.At(int(id)).(al.Allocator).GetFree())
+	for i := 0; i < extents.Size(); i++ {
+		pe := extents.At(i).(types2.BlueStoreIntervalT)
+		node.AppendExtent(&btypes.BlueFsExtentT{
+			Bedv:   id,
+			Offset: pe.Offset,
+			Length: uint32(pe.Length),
+		})
 	}
 
-	return 0
+	return nil
+}
+
+func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64) {
+
+}
+
+func (bfs *BlueFS) writeSuper() {
+	var bl = types.CreateBufferList()
+	//var crc = bl.CRC32(-1)
+
+	utils.AssertTrue(bl.Length() <= getSuperLength())
+	bl.AppendZero(getSuperLength() - bl.Length())
+	bfs.bdev.At(BdevDb).(*types.BlockDevice).Write(getSuperLength(), *bl, false)
 }
 
 func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 	log.Debug("osd uuid is %v", osdUuid.UUID)
-
+	var l sync.Mutex
 	initAlloc(bfs)
 
 	initLogger(bfs)
@@ -113,6 +144,29 @@ func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 	var logFile fileRef
 	logFile.fnode.Ino = uint64(1)
 	logFile.fnode.PreferBdev = BdevWal
+
+	r := bfs.allocate(logFile.fnode.PreferBdev, bfs.Cct.Conf.BlueFsMaxLogRunaway, &logFile.fnode)
+	utils.AssertTrue(nil == r)
+
+	bfs.logT.OpInit() // TODO
+	for i := 0; i < MaxBdev; i++ {
+		p := bfs.blockAll[i]
+
+		if p.Empty() {
+			continue
+		}
+
+		for j := 0; j < p.Size(); j++ {
+			pp := p.At(j).(blockInfo)
+
+			log.Debug("op alloc add start[%x] and length[%x].", pp.GetStart(), pp.GetLen())
+			bfs.logT.OpAllocAdd(uint(i), pp.GetStart(), pp.GetLen())
+		}
+	}
+
+	bfs.flushAndSyncLog(&l, 0, 0)
+
+	super.LogFnode = logFile.fnode
 
 	return 0
 }

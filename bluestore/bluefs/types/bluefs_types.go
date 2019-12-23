@@ -51,11 +51,11 @@ func CreateBlueFsFnodeT() *BlueFsFnodeT {
 	return bf
 }
 
-func (bf *BlueFsFnodeT) getAllocated() uint64 {
+func (bf *BlueFsFnodeT) GetAllocated() uint64 {
 	return bf.Allocated
 }
 
-func (bf *BlueFsFnodeT) recalculateAllocated() {
+func (bf *BlueFsFnodeT) RecalculateAllocated() {
 	bf.Allocated = uint64(0)
 
 	for i := 0; i < bf.Extents.Size(); i++ {
@@ -64,7 +64,7 @@ func (bf *BlueFsFnodeT) recalculateAllocated() {
 
 }
 
-func (bf *BlueFsFnodeT) appendExtent(ext *BlueFsExtentT) {
+func (bf *BlueFsFnodeT) AppendExtent(ext *BlueFsExtentT) {
 	for i := 0; i < bf.Extents.Size(); i++ {
 		if bf.Extents.At(i).(BlueFsExtentT).Equal(ext) {
 			return
@@ -104,4 +104,10 @@ type BlueFsTransactionT struct {
 
 func (bt *BlueFsTransactionT) Empty() bool {
 	return bt.opBl.Length() == 0
+}
+
+func (bt *BlueFsTransactionT) OpInit() {
+}
+
+func (bt *BlueFsTransactionT) OpAllocAdd(id uint, start uint64, len uint64) {
 }

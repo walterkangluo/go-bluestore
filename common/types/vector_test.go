@@ -16,7 +16,6 @@ func TestVector_Init(t *testing.T) {
 	assert.Equal(false, vector.preAlloc)
 }
 
-
 func TestVector_ReSize(t *testing.T) {
 	assert := assert.New(t)
 	var v Vector
