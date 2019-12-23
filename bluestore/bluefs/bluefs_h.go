@@ -59,7 +59,7 @@ type FileReaderBuffer struct {
 	blOff       uint64
 	pos         uint64
 	maxPrefetch uint64
-	bl          types.BufferList
+	bl          ctypes.BufferList
 }
 
 func CreateFileReaderBuffer(mp uint64) *FileReaderBuffer {

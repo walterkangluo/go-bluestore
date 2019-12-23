@@ -5,6 +5,7 @@ import (
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	types2 "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
+	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 	"sync"
@@ -117,7 +118,7 @@ func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64)
 }
 
 func (bfs *BlueFS) writeSuper() {
-	var bl = types.CreateBufferList()
+	var bl = ctypes.CreateBufferList()
 	//var crc = bl.CRC32(-1)
 
 	utils.AssertTrue(bl.Length() <= getSuperLength())
