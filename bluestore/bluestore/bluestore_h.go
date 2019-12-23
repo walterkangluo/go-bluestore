@@ -166,7 +166,6 @@ type BlueStore struct {
 	bluefs.BlueFSDeviceExpander
 	types.MdConfigT
 
-	Path string
 	KvOnly bool
 	Mounted bool
 	Fsid *types.UuidD

@@ -5,6 +5,10 @@ type BlueStoreIntervalT struct {
 	length uint64
 }
 
+type BluestoreBdevLabelT struct{
+	Meta map[string]string
+}
+
 func CreateBlueStoreIntervalT(o uint64, l uint64) *BlueStoreIntervalT {
 	return &BlueStoreIntervalT{
 		offset: o,

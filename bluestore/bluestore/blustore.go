@@ -1,10 +1,14 @@
 package bluestore
 
 import (
+	"fmt"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
 	"github.com/go-bluestore/lib/thread_pool"
 	"github.com/go-bluestore/log"
+	btypes "github.com/go-bluestore/bluestore/bluestore/types"
+	"os"
+	"syscall"
 )
 
 const (
@@ -19,6 +23,46 @@ type SbInfoT struct {
 }
 
 func (bs *BlueStore)ReadMeta(key string, value *string) int{
+	var label *btypes.BluestoreBdevLabelT
+	p := bs.Path + "/block"
+	r := bs.readBdevLabel(bs.Cct, p, label)
+	if r < 0{
+		return bs.ObjectStore.ReadMeta(key, value)
+	}
+
+	i, ok := label.Meta[key]
+	if !ok{
+		return bs.ObjectStore.ReadMeta(key, value)
+	}
+	*value = i
+
+	return 0
+}
+
+func (bs *BlueStore)readBdevLabel(cct *types.CephContext, path string, label *btypes.BluestoreBdevLabelT) int {
+	log.Debug("")
+	/*
+	for fd, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);  fd. < 0; {
+		fd, _ = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0)
+	}*/
+
+	var file *os.File
+	for file, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);
+			err != nil && err == syscall.EINTR; file, err = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0){
+	}
+	var bl types.BufferList
+	r := bl.ReadFd()
+
+	for err := file.Close(); err != nil && err == syscall.EINTR; err = file.Close(){
+	}
+
+	var crc, expected_crc uint32
+	defer func(){
+		if err := recover(); err != nil{
+			log.Debug("unable to decode label at offset %s", )
+			fmt.Println(err)
+		}
+	}()
 	return 0
 }
 
