@@ -12,8 +12,14 @@ func CreateStupidAllocator(cct *types.CephContext, name string) *StupidAllocator
 	}
 }
 
+/*
 func (sa *StupidAllocator) Allocate(wantSize uint64, allocUnit uint64,
 	maxAllocSize uint64, hint int64, extents *btypes.PExtentVector) int64 {
+
+	return int64(0)
+}
+*/
+func (sa *StupidAllocator) Allocate(para ...interface{}) int64 {
 
 	return int64(0)
 }
@@ -23,7 +29,7 @@ func (sa *StupidAllocator) AllocateInit(wantSize uint64, allocUnit uint64,
 	return int64(0)
 }
 
-func (sa *StupidAllocator) Release(releaseSet []uint64) {
+func (sa *StupidAllocator) Release(releaseSet btypes.PExtentVector) {
 	return
 }
 

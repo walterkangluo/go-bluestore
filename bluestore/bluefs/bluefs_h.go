@@ -1,9 +1,9 @@
 package bluefs
 
 import (
-	"github.com/go-bluestore/bluestore/allocator"
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	"github.com/go-bluestore/bluestore/types"
+	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
 	"sync"
 )
@@ -158,25 +158,27 @@ type BlueFS struct {
 	*	BDEV_WAL   db.wal/
 	*	BDEV_SLOW  db.slow/
 	 */
-	bdev           []*types.BlockDevice
-	ioc            types.IOContext
-	blockAll       []blockInfoList
-	alloc          []allocator.Allocator
-	allocSize      []uint64
-	pendingRelease []uint64
+	bdev           *ctypes.Vector  // *types.BlockDevice
+	ioc            *ctypes.Vector  // types.IOContext
+	blockAll       []*ctypes.Vector  // []blockInfoList
+	blockTotal     *ctypes.Vector  // []uint64
+	alloc          *ctypes.Vector  // []allocator.Allocator
+	allocSize      *ctypes.Vector  // []uint64
+	pendingRelease *ctypes.Vector  // []uint64
 
 	slowDevExpander *BlueFSDeviceExpander
 }
 
-func CreateBlueFS(cct *types.CephContext) *BlueFS {
-	blueFs := &BlueFS{
-		Cct: cct,
-		bdev: make([]*types.BlockDevice, 0),
-		blockAll: make([]blockInfoList, 0),
-		alloc: make([]allocator.Allocator, 0),
-		allocSize:make([]uint64, 0),
-		pendingRelease: make([]uint64, 0),
-	}
+func CreateBlueFS(cct *types.CephContext) (blueFs *BlueFS) {
+	blueFs.Cct = cct
+
+	blueFs.blockAll = make([]*ctypes.Vector, 0)
+	blueFs.bdev.Init()
+	blueFs.ioc.Init()
+	blueFs.blockTotal.Init()
+	blueFs.alloc.Init()
+	blueFs.allocSize.Init()
+	blueFs.pendingRelease.Init()
 	return blueFs
 }
 

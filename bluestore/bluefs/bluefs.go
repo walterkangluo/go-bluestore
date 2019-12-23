@@ -3,44 +3,51 @@ package bluefs
 import (
 	al "github.com/go-bluestore/bluestore/allocator"
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
+	types2 "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 )
 
 func initAlloc(bfs *BlueFS) {
-	bfs.alloc = make([]al.Allocator, MaxBdev)
-	bfs.allocSize = make([]uint64, 0, MaxBdev)
-	bfs.pendingRelease = make([]uint64, 0, MaxBdev)
+	bfs.alloc.ReSize(MaxBdev)           // make([]al.Allocator, MaxBdev)
+ 	bfs.allocSize.ReSize(MaxBdev)       //  = make([]uint64, 0, MaxBdev)
+	bfs.pendingRelease.ReSize(MaxBdev)  // = make([]uint64, 0, MaxBdev)
 
-	if nil != bfs.bdev[BdevWal] {
-		bfs.allocSize[BdevWal] = bfs.Cct.Conf.BlueFsAllocSize
+	if nil != bfs.bdev.At(BdevWal) {
+		bfs.allocSize.SetAt(BdevWal, bfs.Cct.Conf.BlueFsAllocSize) // = bfs.Cct.Conf.BlueFsAllocSize
 	}
 
-	if nil != bfs.bdev[BdevSlow] {
-		bfs.allocSize[BdevDb] = bfs.Cct.Conf.BlueFsAllocSize
-		bfs.allocSize[BdevSlow] = bfs.Cct.Conf.BlueFsSharedAllocSize
+	if nil != bfs.bdev.At(BdevSlow) { // [BdevSlow]
+		bfs.allocSize.SetAt(BdevDb, bfs.Cct.Conf.BlueFsAllocSize)
+		bfs.allocSize.SetAt(BdevSlow, bfs.Cct.Conf.BlueFsSharedAllocSize)
+		//bfs.allocSize[BdevDb] = bfs.Cct.Conf.BlueFsAllocSize
+		//bfs.allocSize[BdevSlow] = bfs.Cct.Conf.BlueFsSharedAllocSize
 	} else {
-		bfs.allocSize[BdevDb] = bfs.Cct.Conf.BlueFsAllocSize
+		//bfs.allocSize[BdevDb] = bfs.Cct.Conf.BlueFsAllocSize
+		bfs.allocSize.SetAt(BdevDb, bfs.Cct.Conf.BlueFsAllocSize)
 	}
 
 	var blueFsFile = []string{"bluefs-wal", "bluefs-db", "bluefs-slow"}
-	for id := 0; id < len(bfs.bdev); id++ {
-		if nil == bfs.bdev[id] {
+	for id := 0; id < bfs.bdev.Size(); id++ {
+		if nil == bfs.bdev.At(id) {
 			continue
 		}
-		utils.AssertTrue(bfs.bdev[id].GetSize() > 0)
-		utils.AssertTrue(bfs.allocSize[id] > 0)
+		utils.AssertTrue(bfs.bdev.At(id).(*types.BlockDevice).GetSize() > 0)
+		utils.AssertTrue(bfs.allocSize.At(id).(uint64) > 0)
 
 		log.Debug("bdev name %s, allocSize %d, size %d.",
-			blueFsFile[id], bfs.allocSize[id], bfs.bdev[id].GetSize())
+			blueFsFile[id], bfs.allocSize.At(id).(uint64), bfs.bdev.At(id).(*types.BlockDevice).GetSize())
 
-		bfs.alloc[id] = al.CreateAllocator(
-			bfs.Cct, bfs.Cct.Conf.BlueFsAllocator, int64(bfs.bdev[id].GetSize()), int64(bfs.allocSize[id]), blueFsFile[id])
+		allocator := al.CreateAllocator(bfs.Cct, bfs.Cct.Conf.BlueFsAllocator,
+			int64(bfs.bdev.At(id).(*types.BlockDevice).GetSize()), bfs.allocSize.At(id).(int64), blueFsFile[id])
+		bfs.alloc.SetAt(id, allocator)
 		blockAll := bfs.blockAll[id]
-		for index, blockInfo := range blockAll {
-			log.Debug("index %d and block start is %d and end is %d.", index, blockInfo.getStart(), blockInfo.getLen())
-			bfs.alloc[id].InitAddFree(blockInfo.getStart(), blockInfo.getLen())
+
+		for i := 0; i < blockAll.Size(); i ++ {
+			block := blockAll.At(i).(*blockInfo)
+			log.Debug("index %d and block start is %d and end is %d.", i, block.getStart(), block.getLen())
+			bfs.alloc.At(id).(al.Allocator).InitAddFree(block.getStart(), block.getLen())
 		}
 	}
 }
@@ -51,11 +58,37 @@ func initLogger(bfs *BlueFS) {
 
 func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) int {
 	log.Debug("len %d form device type %d", l, id)
+	utils.AssertTrue(int(id) < bfs.alloc.Size())
+	var extents types2.PExtentVector
+	var allocLen int64
+	extents.Init()
+	if nil != bfs.alloc.At(int(id)) {
+		hInt := uint64(0)
+		if !node.Extents.Empty() && node.Extents.Back().(btypes.BlueFsExtentT).Bedv == id {
+			hInt = node.Extents.Back().(*btypes.BlueFsExtentT).End()
+		}
+		extents.Reserve(4)
+		allocLen = bfs.alloc.At(int(id)).(al.Allocator).Allocate(
+			uint64(utils.ROUND_UP_TO(int64(l), bfs.allocSize.At(int(id)).(int64))), bfs.allocSize.At(int(id)).(int64), int64(hInt), &extents)
+	}
 
-	utils.AssertTrue(int(id) < len(bfs.alloc))
+	if nil == bfs.alloc.At(int(id)) || allocLen < 0 || allocLen < int64(utils.ROUND_UP_TO(int64(l), int64(bfs.allocSize.At(int(id)).(int64)))) {
+		if allocLen > 0 {
+			bfs.alloc.At(int(id)).(al.Allocator).Release(extents)
+		}
+	}
 
-	if nil != bfs.alloc[id] {
-		//hInt := uint64(0)
+	if id != BdevSlow {
+		if nil != bfs.bdev || 0 == bfs.bdev.Size() {
+			log.Error("failed to allocate %d on bdev %d, free %x, fallback to bdev %d.",
+				l, id, bfs.alloc.At(int(id)), id + 1)
+		}
+		return bfs.allocate(id + 1, l, node)
+	}
+
+	if nil != bfs.bdev.At(int(id)) {
+		log.Error("failed to allocate %x on bdev %d with free %d.",
+			l, id, bfs.alloc.At(int(id)).(al.Allocator).GetFree())
 	}
 
 	return 0
@@ -70,7 +103,7 @@ func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 
 	super := btypes.BlueFsSuperT{
 		Version:   uint64(1),
-		BlockSize: bfs.bdev[BdevDb].GetBlockSize(),
+		BlockSize: bfs.bdev.At(BdevDb).(*types.BlockDevice).GetBlockSize(),
 		OsdUuid:   osdUuid,
 		Uuid:      types.GenerateRandomUuid(),
 	}

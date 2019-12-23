@@ -1,5 +1,7 @@
 package types
 
+import "github.com/go-bluestore/common/types"
+
 type BlueStoreIntervalT struct {
 	offset uint64
 	length uint64
@@ -29,4 +31,6 @@ func CreateBluesStorePExtentT1(bs BlueStoreIntervalT) *BluesStorePExtentT {
 	return &BluesStorePExtentT{bs}
 }
 
-type PExtentVector []BluesStorePExtentT
+type PExtentVector struct {
+	*types.Vector
+}

@@ -36,7 +36,7 @@ type BlueFsFnodeT struct {
 	Size uint64
 	//mtime time.Time
 	PreferBdev uint8
-	Extents    *ctypes.Vector   // BlueFsExtentT
+	Extents    *ctypes.Vector // BlueFsExtentT
 	Allocated  uint64
 }
 

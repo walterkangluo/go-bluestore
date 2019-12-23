@@ -9,8 +9,8 @@ type AltT interface{}
 
 //Vector is a list based on C++ Vector with functional programming functions
 type Vector struct {
-	data []T
-	size int
+	data     []T
+	size     int
 	preAlloc bool
 }
 
@@ -54,6 +54,22 @@ func (v *Vector) Reserve(reserveSize int) {
 	v.preAlloc = true
 }
 
+// only be called without any data
+func (v *Vector) ReSize(reserveSize int) {
+	if v.size > reserveSize {
+		panic("will discard data")
+	}
+
+	if v.size > 0 {
+		len := v.size
+		copy := v.data
+		v.data = make([]T, len, reserveSize)
+
+		for i := 0; i < len; i++ {
+			v.data[i] = copy[i]
+		}
+	}
+}
 
 //At : Returns the element of the Vector at a specified index
 //_Parameters :
@@ -116,7 +132,6 @@ func (v *Vector) InsertAt(index int, element T) {
 	v.size++
 }
 
-
 func (v *Vector) Front() T {
 	return v.data[0]
 }
@@ -129,7 +144,7 @@ func (v *Vector) Back() T {
 	if v.size == 0 {
 		return nil
 	}
-	return v.data[v.size -1]
+	return v.data[v.size-1]
 }
 
 func (v *Vector) Empty() bool {

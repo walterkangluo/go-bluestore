@@ -9,6 +9,5 @@ func TestCreateUuidD(t *testing.T) {
 	t.Log(u)
 }
 
-
 func TestGenerateRandomUuid(t *testing.T) {
 }
