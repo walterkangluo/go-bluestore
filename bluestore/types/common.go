@@ -1,47 +1,46 @@
 package types
 
-import "github.com/go-bluestore/utils"
+import (
+	"github.com/go-bluestore/common/types"
+	"github.com/go-bluestore/utils"
+)
 
 type BufferList struct {
-	data []byte
-	size uint64
+	types.Vector
 }
 
-func CreateBufferList() *BufferList {
-	return &BufferList{
-		data: make([]byte, 0),
-		size: 0,
-	}
+func (bl *BufferList) CreateVector(_preAlloc bool, _size int) {
+	bl.CreateVector(_preAlloc, _size)
 }
 
-func (bf *BufferList) Length() uint64 {
-	return bf.size
+func (bl *BufferList) Init() {
+	bl.Init()
 }
 
-func (bf *BufferList) Encode(data []byte) []byte {
-	for i := uint64(0); i < bf.size; i++ {
-		bf.data = append(bf.data, data[i])
-		bf.size++
-	}
-	return bf.data
+func (bl *BufferList) Length() uint64 {
+	return bl.Length()
 }
 
-func (bf *BufferList) AppendZero(length uint64) {
-	for i := uint64(0); i < length; i++ {
-		bf.data = append(bf.data, 0)
-		bf.size++
-	}
+func (bl *BufferList) Encode(data interface{}) []byte {
+	return nil
 }
 
-func (bf *BufferList) CRC32(src interface{}) uint32 {
+func (bl *BufferList) AppendZero(length uint64) {
+}
+
+func (bl *BufferList) CRC32(src interface{}) uint32 {
 
 	switch src.(type) {
 	case int:
 		if src.(int) == -1 {
-			return utils.CRC32Byte(bf.data)
+			return utils.CRC32Byte(nil)
 		}
 	default:
 		panic("not support")
 	}
 	return 0
+}
+
+func (bl *BufferList) Begin () {
+	return bl.Begin()
 }

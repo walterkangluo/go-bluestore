@@ -1,6 +1,8 @@
 package types
 
-import "github.com/go-bluestore/utils"
+import (
+	"github.com/go-bluestore/utils"
+)
 
 type BufferList struct {
 	data []byte
@@ -12,6 +14,11 @@ func CreateBufferList() *BufferList {
 		data: make([]byte, 0),
 		size: 0,
 	}
+}
+
+func (bf *BufferList) Init() {
+	bf.data = make([]byte, 0)
+	bf.size = 0
 }
 
 func (bf *BufferList) Length() uint64 {
