@@ -25,7 +25,7 @@ func TestElements_GetKey(t *testing.T) {
 	ml.Walk(cb)
 
 	el, ok := ml.Exists(a)
-	assert.Nil(ok)
+	assert.True(ok)
 	assert.Equal(a.GetKey(), el.(*Elements).GetKey())
 	assert.Equal(a.GetVal(), el.(*Elements).GetVal())
 	fmt.Printf("Size of MapList: %d \n", ml.Size())

@@ -109,7 +109,7 @@ func (bs *BlueStore) openFsid(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore) readFsid(uuid *types.UuidD) int {
+func (bs *BlueStore) readFsid(uuid types.UuidD) int {
 	return 0
 }
 
@@ -327,9 +327,13 @@ func (bs *BlueStore) Mount() int {
 }
 
 
-func (bs *BlueStore) MkFS() error {
-	log.Debug("path is %s.", bs.Path)
+func (bs *BlueStore) Mkfs() error {
 	var r int
+	var oldFsId types.UuidD
+	// var freeListType = "bitmap"
+
+	log.Debug("path is %s.", bs.Path)
+
 	if bs.Cct.Conf.OsdMaxObjectSize > ObjectMaxSize {
 		log.Error("OsdMaxObjectSize %d size over ObjectMaxSize %d.", bs.Cct.Conf.OsdMaxObjectSize, ObjectMaxSize)
 		return syscall.EINVAL
@@ -365,6 +369,38 @@ func (bs *BlueStore) MkFS() error {
 			return syscall.Errno(r)
 		}
 	}
+
+
+	r = bs.openPath()
+	if r < 0 {
+		goto outPathFd
+	}
+
+	r = bs.lockFsid()
+	if r < 0 {
+		goto outCloseFd
+	}
+
+	r = bs.readFsid(oldFsId)
+	if r < 0 || oldFsId.IsZero() {
+		if bs.Fsid.IsZero() {
+			bs.Fsid = types.GenerateRandomUuid()
+			log.Debug("generate fsid is %x.", bs.Fsid)
+		} else {
+			log.Debug("using provided fsid %x.", bs.Fsid)
+		}
+	} else {
+		if !bs.Fsid.IsZero() && bs.Fsid != oldFsId {
+			log.Error("ondisk uuid %x != provided %x.", oldFsId, bs.Fsid)
+			//r = -syscall.EINVAL.
+		}
+	}
+
+
+outCloseFd:
+	bs.closeFsid()
+outPathFd:
+	bs.closePath()
 
 	return syscall.Errno(0)
 }

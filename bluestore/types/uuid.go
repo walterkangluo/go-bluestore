@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"github.com/satori/go.uuid"
 )
 
@@ -15,4 +16,10 @@ func GenerateRandomUuid() UuidD {
 	}
 
 	return UuidD{u2}
+}
+
+func (u *UuidD) IsZero() bool {
+	var temp uuid.UUID
+
+	return bytes.Equal(u.UUID[:], temp[:])
 }

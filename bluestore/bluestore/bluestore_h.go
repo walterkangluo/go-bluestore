@@ -168,7 +168,7 @@ type BlueStore struct {
 
 	KvOnly        bool
 	Mounted       bool
-	Fsid          *types.UuidD
+	Fsid          types.UuidD
 	BlueFS        *bluefs.BlueFS
 	Path          string
 	MemPoolThread *thread_pool.MempoolThread
