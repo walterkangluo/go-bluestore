@@ -9,3 +9,7 @@ type ObjectStore struct {
 func (obs *ObjectStore) ReadMeta(key string, value *string) int {
 	return 0
 }
+
+func (obs *ObjectStore) WriteMeta(key string, value string) int {
+	return 0
+}

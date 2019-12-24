@@ -4,7 +4,10 @@ import (
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
+	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
+	"github.com/go-bluestore/utils"
+	"syscall"
 )
 
 const (
@@ -18,21 +21,39 @@ type SbInfoT struct {
 	compressed bool
 }
 
-func (bs *BlueStore) ReadMeta(key string, value *string) int {
+func (bs *BlueStore) ReadMeta(_key string, _value *string) int {
 	var label *btypes.BluestoreBdevLabelT
+
 	p := bs.Path + "/block"
 	r := bs.readBdevLabel(bs.Cct, p, label)
 	if r < 0 {
-		return bs.ObjectStore.ReadMeta(key, value)
+		return bs.ObjectStore.ReadMeta(_key, _value)
 	}
 
-	i, ok := label.Meta[key]
+	e, ok := label.Meta.Exists(ctypes.CreateElements(_key, nil))
 	if !ok {
-		return bs.ObjectStore.ReadMeta(key, value)
+		return bs.ObjectStore.ReadMeta(_key, _value)
 	}
-	*value = i
 
+	*_value = e.(*ctypes.Elements).GetVal().(string)
 	return 0
+}
+
+
+func (bs *BlueStore) WriteMeta(_key string, _value string) int {
+	var label *btypes.BluestoreBdevLabelT
+
+	p := bs.Path + "/block"
+	r := bs.readBdevLabel(bs.Cct, p, label)
+	if r < 0 {
+		return bs.ObjectStore.WriteMeta(_key, _value)
+	}
+
+	label.Meta.Push(ctypes.CreateElements(_key, nil))
+	r = bs.writeBdevLabel(bs.Cct, p, label)
+	utils.AssertTrue(r == 0)
+
+	return bs.ObjectStore.WriteMeta(_key, _value)
 }
 
 func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *btypes.BluestoreBdevLabelT) int {
@@ -60,6 +81,10 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 			}
 		}()
 	*/
+	return 0
+}
+
+func (bs *BlueStore) writeBdevLabel(cct *types.CephContext, path string, label *btypes.BluestoreBdevLabelT) int {
 	return 0
 }
 
@@ -286,4 +311,47 @@ outPath:
 
 func (bs *BlueStore) Mount() int {
 	return bs.mount(false)
+}
+
+
+func (bs *BlueStore) MkFS() error {
+	log.Debug("path is %s.", bs.Path)
+	var r int
+	if bs.Cct.Conf.OsdMaxObjectSize > ObjectMaxSize {
+		log.Error("OsdMaxObjectSize %d size over ObjectMaxSize %d.", bs.Cct.Conf.OsdMaxObjectSize, ObjectMaxSize)
+		return syscall.EINVAL
+	}
+	var done string
+	r = bs.ReadMeta("mkfs_done", &done)
+	if r == 0 {
+		log.Debug("already make fs")
+		if bs.Cct.Conf.BlueStoreFsckOnMkfs {
+			r = bs.Fsck(bs.Cct.Conf.BlueStoreFsckOnMkfsDeep)
+			if r < 0 {
+				log.Error("fsck on mkfs found fatal error %d.", r)
+				return syscall.Errno(r)
+			}
+			if r > 0 {
+				log.Error("fsck found %d error.", r)
+				return syscall.Errno(r)
+			}
+		}
+		return syscall.Errno(r)
+	}
+
+	var btype string
+	r = bs.ReadMeta("type", &btype)
+	if r == 0 {
+		if "bluestore" != btype {
+			log.Error("expect type is bluestore, while type is %s.", btype)
+			return syscall.EIO
+		}
+	} else {
+		r = bs.WriteMeta("type", "bluestore")
+		if r < 0 {
+			return syscall.Errno(r)
+		}
+	}
+
+	return syscall.Errno(0)
 }
