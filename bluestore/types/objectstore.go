@@ -6,6 +6,6 @@ type ObjectStore struct {
 	Path string
 }
 
-func (obs *ObjectStore)ReadMeta(key string, value *string) int {
+func (obs *ObjectStore) ReadMeta(key string, value *string) int {
 	return 0
 }

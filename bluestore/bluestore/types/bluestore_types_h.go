@@ -7,7 +7,7 @@ type BlueStoreIntervalT struct {
 	Length uint64
 }
 
-type BluestoreBdevLabelT struct{
+type BluestoreBdevLabelT struct {
 	Meta map[string]string
 }
 

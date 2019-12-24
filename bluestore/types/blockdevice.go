@@ -44,6 +44,9 @@ func (io *IOContext) GetReturnValue(_r int) int {
 	return io.r
 }
 
+func (io *IOContext) AioWait() {
+}
+
 type BlockDevice struct {
 	cct  *CephContext
 	path string
@@ -69,4 +72,10 @@ func (bd *BlockDevice) GetBlockSize() uint32 {
 }
 
 func (bd *BlockDevice) Write(off uint64, bl types.BufferList, buffered bool) {
+}
+
+func (bd *BlockDevice) Flush() {
+}
+
+func (bd *BlockDevice) QueueReapIoc() {
 }

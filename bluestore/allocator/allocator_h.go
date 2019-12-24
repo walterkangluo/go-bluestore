@@ -15,7 +15,7 @@ type Allocator interface {
 
 	InitRmFree(offset uint64, length uint64)
 
-	Shutdown(offset uint64, length uint64)
+	Shutdown()
 
 	Dump()
 }

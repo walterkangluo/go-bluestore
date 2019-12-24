@@ -126,7 +126,41 @@ func (bfs *BlueFS) writeSuper() {
 	bfs.bdev.At(BdevDb).(*types.BlockDevice).Write(getSuperLength(), *bl, false)
 }
 
-func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
+func (bfs *BlueFS) flushBdev() {
+	for i := 0; i < bfs.bdev.Size(); i++ {
+		bfs.bdev.At(i).(*types.BlockDevice).Flush()
+	}
+}
+
+func (bfs *BlueFS) closeWriter() {
+	var h = bfs.logWriter
+	log.Debug("write type is %d.", h.writerType)
+
+	for i := 0; i < MaxBdev; i++ {
+		if nil != bfs.bdev.At(i) {
+			utils.AssertTrue(nil != h.iocv[i])
+
+			h.iocv[i].AioWait()
+			bfs.bdev.At(i).(*types.BlockDevice).QueueReapIoc()
+		}
+	}
+}
+
+func (bfs *BlueFS) stopAlloc() {
+	for i := 0; i < bfs.alloc.Size(); i++ {
+		if p := bfs.alloc.At(i); p != nil {
+			p.(al.Allocator).Shutdown()
+		}
+	}
+	bfs.alloc.Clear()
+}
+
+func (bfs *BlueFS) shutdownLogger() {
+	bfs.Cct.GetPerfCountersCollection().Remove(bfs.logger)
+	bfs.logger = nil
+}
+
+func (bfs *BlueFS) mkfs(osdUuid types.UuidD) {
 	log.Debug("osd uuid is %v", osdUuid.UUID)
 	var l sync.Mutex
 	initAlloc(bfs)
@@ -168,6 +202,16 @@ func (bfs *BlueFS) mkfs(osdUuid types.UuidD) int {
 	bfs.flushAndSyncLog(&l, 0, 0)
 
 	super.LogFnode = logFile.fnode
+	bfs.writeSuper()
+	bfs.flushBdev()
 
-	return 0
+	bfs.super = btypes.CreateBlueFsSuperT()
+	bfs.closeWriter()
+	bfs.logWriter = nil
+	//bfs.blockAll
+	bfs.blockTotal.Clear()
+	bfs.stopAlloc()
+	bfs.shutdownLogger()
+
+	log.Debug("make bluefs success")
 }

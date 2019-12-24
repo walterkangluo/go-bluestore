@@ -92,6 +92,11 @@ func CreateBlueFsSuperT() *BlueFsSuperT {
 	}
 }
 
+func (bs *BlueFsSuperT) Init() {
+	bs.Version = uint64(0)
+	bs.BlockSize = uint32(4096)
+}
+
 func (bs *BlueFsSuperT) blockMask() uint64 {
 	return ^(uint64(bs.BlockSize) - uint64(1))
 }

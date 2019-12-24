@@ -45,7 +45,7 @@ func (sa *StupidAllocator) InitRmFree(offset uint64, length uint64) {
 	return
 }
 
-func (sa *StupidAllocator) Shutdown(offset uint64, length uint64) {
+func (sa *StupidAllocator) Shutdown() {
 	return
 }
 
