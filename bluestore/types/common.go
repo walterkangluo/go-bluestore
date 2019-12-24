@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/utils"
+	"os"
 )
 
 type BufferList struct {
@@ -41,6 +42,14 @@ func (bl *BufferList) CRC32(src interface{}) uint32 {
 	return 0
 }
 
-func (bl *BufferList) Begin () {
-	return bl.Begin()
+func (bl *BufferList) Decode(in []byte, data types.T) {
+
+}
+
+func (bl *BufferList) ReadFd(fd *os.File, len uint64) int64 {
+	return 0
+}
+
+func (bl *BufferList) SubstrOf(other BufferList, off uint32, len uint32) {
+
 }

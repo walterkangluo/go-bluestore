@@ -46,7 +46,7 @@ func (sa *BitmapAllocator) InitRmFree(offset uint64, length uint64) {
 	return
 }
 
-func (sa *BitmapAllocator) Shutdown(offset uint64, length uint64) {
+func (sa *BitmapAllocator) Shutdown() {
 	return
 }
 

@@ -6,3 +6,10 @@ type PerfCounters struct {
 	Nick        string
 	Prio        uint8
 }
+
+type PerfCountersCollection struct {
+}
+
+func (pc *PerfCountersCollection) Remove(l *PerfCounters) {
+
+}

@@ -52,7 +52,7 @@ type FileWriter struct {
 	// bufferAppender bufferlist
 	writerType int
 	lock       sync.Mutex
-	//iocv [MaxBdev]types.AioContext
+	iocv       [MaxBdev]*types.IOContext
 }
 
 type FileReaderBuffer struct {
@@ -140,7 +140,7 @@ type BlueFS struct {
 	dirMap  map[string]dirRef
 	fileMap map[uint64]fileRef
 	//TODO: dirtyFiles dirty_file_list unknown
-	super        btypes.BlueFsSuperT
+	super        *btypes.BlueFsSuperT
 	inoLast      uint64
 	logSeq       uint64
 	logSeqStable uint64

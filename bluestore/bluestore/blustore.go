@@ -8,6 +8,7 @@ import (
 	"github.com/go-bluestore/log"
 	"os"
 	"syscall"
+	"unsafe"
 )
 
 const (
@@ -40,33 +41,39 @@ func (bs *BlueStore) ReadMeta(key string, value *string) int {
 
 func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *btypes.BluestoreBdevLabelT) int {
 	log.Debug("")
-	/*
-		for fd, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0);  fd. < 0; {
-			fd, _ = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0)
-		}*/
 
 	var file *os.File
-	for file, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0); err != nil && err == syscall.EINTR; file, err = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0) {
+	for _, err := os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0); err != nil && err == syscall.EINTR; _, err = os.OpenFile(bs.Path, os.O_RDONLY|os.O_EXCL, 0) {
 	}
 	var bl types.BufferList
-	r := bl.ReadFd()
-
+	r := bl.ReadFd(file, ObjectMaxSize)
 	for err := file.Close(); err != nil && err == syscall.EINTR; err = file.Close() {
 	}
+	if r < 0 {
+		log.Error("failed to read from %s: %d", path, r)
+	}
 
-	var crc, expected_crc uint32
-
+	var crc, expectedCrc uint32
+	p := bl.Front()
 	defer func() {
 		if err := recover(); err != nil {
 			log.Debug("unable to decode label at offset %s")
 			fmt.Println(err)
 		}
 	}()
+	bl.Decode(*(*[]byte)(unsafe.Pointer(label)), p)
+	var t types.BufferList
+	/*TODO:暂时未想好实现，主要关于迭代器的问题,此处需要begin函数返回的对象为迭代器，现有实现中
+	返回的是vector中的第一个元素，无法实现p.get_off()方法，待后续看这里的迭代器能否用其他用法代替*/
+	//t.SubstrOf(bl, 0, p.get_off())
+	crc = t.CRC32(-1)
+	bl.Decode(*(*[]byte)(unsafe.Pointer(&expectedCrc)), p)
 
-	return 0
-}
+	if crc != expectedCrc {
+		log.Error("bad crc on label, expected %d != actual %d", expectedCrc, crc)
+	}
+	log.Debug("got %v", *label)
 
-func (bs *BlueStore) ReadMeta(key string, value *string) int {
 	return 0
 }
 
