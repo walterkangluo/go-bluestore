@@ -8,7 +8,7 @@ type BlueStoreIntervalT struct {
 }
 
 type BluestoreBdevLabelT struct {
-	Meta map[string]string
+	Meta *types.MapList
 }
 
 func CreateBlueStoreIntervalT(o uint64, l uint64) *BlueStoreIntervalT {

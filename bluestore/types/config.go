@@ -7,5 +7,7 @@ type MdConfigT struct {
 	BlueFsMaxLogRunaway      uint64
 	BlueStoreFsckOnMount     bool
 	BlueStoreFsckOnMountDeep bool
+	BlueStoreFsckOnMkfs      bool
+	BlueStoreFsckOnMkfsDeep  bool
 	OsdMaxObjectSize         uint32
 }
