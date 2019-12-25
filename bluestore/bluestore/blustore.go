@@ -77,7 +77,7 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 	p := bl.Front()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Debug("unable to decode label at offset %s")
+			log.Debug("unable to decode label at offset")
 			fmt.Println(err)
 		}
 	}()
@@ -326,10 +326,10 @@ func (bs *BlueStore) Mount() int {
 	return bs.mount(false)
 }
 
-func (bs *BlueStore) setupBlockSymlinkOrFile(name string, epath string, size uint64, create bool) int {
+func (bs *BlueStore) setupBlockSymlinkOrFile(name string, epath string, size uint64, create bool) error {
 	log.Debug("name: %s, path %s, size %d, create %v.", name, epath, size, create)
 
-	var r = 0
+	var r error
 	var flags = syscall.O_RDWR | syscall.O_CLOEXEC
 
 	if create {
@@ -337,34 +337,58 @@ func (bs *BlueStore) setupBlockSymlinkOrFile(name string, epath string, size uin
 	}
 
 	if 0 != len(epath) {
-		err := syscall.Symlink(epath, name)
-		if nil != err {
-			r = -1
+		r = syscall.Symlink(epath, name)
+		if nil != r {
 			log.Error("failed to create link for %s and %s.", epath, name)
 			return r
 		}
 
 		if strings.HasPrefix(epath, SpdkPrefix) {
-			fd, err := syscall.Openat(bs.pathFd, epath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
-			if nil != err {
-				r = -1
+			file, r := os.OpenFile(epath, flags, 0644)
+			if nil != r {
 				log.Error("failed to open %s", epath)
 				return r
 			}
+			defer file.Close()
 
 			i := utils.Substr(epath, SpdkPrefix)
 			utils.AssertTrue(i != -1)
-
-			n, err := syscall.Write(fd, []byte(epath[i+len(SpdkPrefix):]))
-			utils.AssertTrue(n == len([]byte(epath[i+len(SpdkPrefix):])))
+			remainString := epath[i+len(SpdkPrefix):]
+			n, r := file.WriteString(remainString)
+			utils.AssertTrue(n == len(remainString))
+			log.Debug("create %s symlink to %s.", name, epath)
 			return r
 		}
 	}
-	return 0
+
+	if size > 0 {
+		file, r := os.OpenFile(epath, flags, 0644)
+		if nil == r {
+			st, r := file.Stat()
+			if nil == r && st.Mode().IsRegular() && st.Size() == int64(0) {
+
+				r = file.Truncate(int64(size))
+				if nil != r {
+					log.Error("failed to resize %s to %d.", name, size)
+					return r
+				}
+			}
+
+			if bs.Cct.Conf.BlueStoreBlockPreallocateSize {
+				// TODO： implement fallcate manual
+			}
+			log.Debug("resize file %s to %d.", name, size)
+		} else {
+			log.Error("failed to open file %s.", name)
+			return r
+		}
+	}
+	return nil
 }
 
 func (bs *BlueStore) Mkfs() error {
 	var r int
+	var e error
 	var oldFsId types.UuidD
 	// var freeListType = "bitmap"
 
@@ -433,10 +457,53 @@ func (bs *BlueStore) Mkfs() error {
 		bs.Fsid = oldFsId
 	}
 
+	e = bs.setupBlockSymlinkOrFile(
+		"block", bs.Cct.Conf.BlueStoreBlockPath, bs.Cct.Conf.BlueStoreBlockSize, bs.Cct.Conf.BlueStoreBlockCreate)
+	if nil != e {
+		goto outCloseFsId
+	}
+
+	if bs.Cct.Conf.BlueStoreBlueFs {
+		e = bs.setupBlockSymlinkOrFile(
+			"block.wal", bs.Cct.Conf.BlueStoreBlockWalPath, bs.Cct.Conf.BlueStoreBlockWalSize, bs.Cct.Conf.BlueStoreBlockWalCreate)
+		if nil != e {
+			goto outCloseFsId
+		}
+
+		e = bs.setupBlockSymlinkOrFile(
+			"block.db", bs.Cct.Conf.BlueStoreBlockDbPath, bs.Cct.Conf.BlueStoreBlockDbSize, bs.Cct.Conf.BlueStoreBlockDbCreate)
+		if nil != e {
+			goto outCloseFsId
+		}
+	}
+
 outCloseFd:
+	bs.closeFm()
+outCloseFsId:
 	bs.closeFsid()
 outPathFd:
 	bs.closePath()
 
-	return syscall.Errno(0)
+	if r == 0 && e == nil && bs.Cct.Conf.BlueStoreFsckOnMkfs {
+		rc := bs.Fsck(bs.Cct.Conf.BlueStoreFsckOnMkfsDeep)
+		if rc < 0 {
+			return syscall.Errno(r)
+		}
+		if rc > 0 {
+			log.Error("found %d errors.", rc)
+			e = syscall.EIO
+		}
+	}
+
+	if r == 0 && e == nil {
+		r = bs.WriteMeta("mkfs_done", "yes")
+	}
+
+	if r < 0 {
+		log.Error("write mkfs_done failed with %d.", r)
+	} else {
+		log.Info("bluestore mkfs success")
+	}
+
+	return e
 }
