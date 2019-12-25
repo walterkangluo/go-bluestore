@@ -114,3 +114,12 @@ func TestMD5(t *testing.T) {
 	cc := CRC32Byte(toByte)
 	assert.Equal(uint32(4041457148), cc)
 }
+
+func TestTrimLastSpace(t *testing.T) {
+	assert := assert.New(t)
+
+	bb := "\t \n s \n fs\td \n \t "
+
+	ss := TrimLastSpace(bb)
+	assert.Equal("\t \n s \n fs\td", ss)
+}

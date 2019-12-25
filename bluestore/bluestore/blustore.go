@@ -7,10 +7,11 @@ import (
 	"github.com/go-bluestore/common"
 	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
+	"github.com/go-bluestore/utils"
 	"os"
+	"strings"
 	"syscall"
 	"unsafe"
-	"github.com/go-bluestore/utils"
 )
 
 const (
@@ -41,7 +42,6 @@ func (bs *BlueStore) ReadMeta(_key string, _value *string) int {
 	*_value = e.(*ctypes.Elements).GetVal().(string)
 	return 0
 }
-
 
 func (bs *BlueStore) WriteMeta(_key string, _value string) int {
 	var label *btypes.BluestoreBdevLabelT
@@ -326,6 +326,42 @@ func (bs *BlueStore) Mount() int {
 	return bs.mount(false)
 }
 
+func (bs *BlueStore) setupBlockSymlinkOrFile(name string, epath string, size uint64, create bool) int {
+	log.Debug("name: %s, path %s, size %d, create %v.", name, epath, size, create)
+
+	var r = 0
+	var flags = syscall.O_RDWR | syscall.O_CLOEXEC
+
+	if create {
+		flags |= syscall.O_CREAT
+	}
+
+	if 0 != len(epath) {
+		err := syscall.Symlink(epath, name)
+		if nil != err {
+			r = -1
+			log.Error("failed to create link for %s and %s.", epath, name)
+			return r
+		}
+
+		if strings.HasPrefix(epath, SpdkPrefix) {
+			fd, err := syscall.Openat(bs.pathFd, epath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+			if nil != err {
+				r = -1
+				log.Error("failed to open %s", epath)
+				return r
+			}
+
+			i := utils.Substr(epath, SpdkPrefix)
+			utils.AssertTrue(i != -1)
+
+			n, err := syscall.Write(fd, []byte(epath[i+len(SpdkPrefix):]))
+			utils.AssertTrue(n == len([]byte(epath[i+len(SpdkPrefix):])))
+			return r
+		}
+	}
+	return 0
+}
 
 func (bs *BlueStore) Mkfs() error {
 	var r int
@@ -370,7 +406,6 @@ func (bs *BlueStore) Mkfs() error {
 		}
 	}
 
-
 	r = bs.openPath()
 	if r < 0 {
 		goto outPathFd
@@ -392,10 +427,11 @@ func (bs *BlueStore) Mkfs() error {
 	} else {
 		if !bs.Fsid.IsZero() && bs.Fsid != oldFsId {
 			log.Error("ondisk uuid %x != provided %x.", oldFsId, bs.Fsid)
-			//r = -syscall.EINVAL.
+			//r = -syscall.EINVAL
+			r = -0x16
 		}
+		bs.Fsid = oldFsId
 	}
-
 
 outCloseFd:
 	bs.closeFsid()

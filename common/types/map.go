@@ -73,7 +73,7 @@ type Elements struct {
 	val interface{}
 }
 
-func CreateElements(_key interface{}, _val interface{}) *Elements{
+func CreateElements(_key interface{}, _val interface{}) *Elements {
 	return &Elements{
 		key: _key,
 		val: _val,

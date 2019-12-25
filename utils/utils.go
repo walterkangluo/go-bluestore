@@ -14,6 +14,8 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // 判断路径是否存在，不论是文件或者目录
@@ -211,4 +213,25 @@ func CRC32String(str string) uint32 {
 
 func CRC32Byte(src []byte) uint32 {
 	return crc32.ChecksumIEEE(src)
+}
+
+func Substr(source string, sub string) int {
+	return strings.Index(source, sub)
+}
+
+var asciiSpace = [256]uint8{'\t': 1, '\n': 1, '\v': 1, '\f': 1, ' ': 1}
+
+func TrimLastSpace(s string) string {
+	stop := len(s)
+	for ; stop > 0; stop-- {
+		c := s[stop-1]
+		if c > utf8.RuneSelf {
+			return strings.TrimFunc(s, unicode.IsSpace)
+		}
+		if asciiSpace[c] == 0 {
+			break
+		}
+	}
+
+	return s[:stop]
 }

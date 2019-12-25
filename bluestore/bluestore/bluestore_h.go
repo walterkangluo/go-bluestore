@@ -15,6 +15,8 @@ const (
 	StateFsCompressed          = 3
 	StateFsCompressedAllocated = 4
 	StateFsLast                = 5
+
+	SpdkPrefix = "spdk:"
 )
 
 type BuffSpace struct {
@@ -172,6 +174,9 @@ type BlueStore struct {
 	BlueFS        *bluefs.BlueFS
 	Path          string
 	MemPoolThread *thread_pool.MempoolThread
+
+	pathFd int
+	fsIdFd int
 }
 
 type ONode struct {
