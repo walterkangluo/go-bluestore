@@ -182,7 +182,7 @@ func CreateBlueFS(cct *types.CephContext) (blueFs *BlueFS) {
 	return blueFs
 }
 
-func (bf *BlueFS) setSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
+func (bf *BlueFS) SetSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
 	bf.slowDevExpander = bfe
 }
 

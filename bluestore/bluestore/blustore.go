@@ -204,7 +204,7 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 	r := bs.ReadMeta("type", &mType)
 	if r < 0 {
 		log.Error("expected bluestore, but type is %s", mType)
-		return -5
+		return r
 	}
 
 	if mType != "bluestore" {
@@ -509,6 +509,7 @@ func (bs *BlueStore) openDB() error {
 }
 
 func (bs *BlueStore) Mkfs() error {
+	log.Debug("path is %s.", bs.Path)
 	var r int
 	var e error
 	var oldFsId types.UUID

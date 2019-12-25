@@ -1,6 +1,11 @@
 package common
 
-import "time"
+import (
+	"io"
+	"os"
+	"syscall"
+	"time"
+)
 
 type ArrayType int
 
@@ -29,4 +34,44 @@ type PoolFlags struct {
 	// PanicHandler is used to handle panics from each worker goroutine.
 	// if nil, panics will be thrown out again from worker goroutines.
 	PanicHandler func(interface{})
+}
+
+func SafeRead(f *os.File, buf *string, count int64) (int64, error) {
+	var cnt int64
+	var data = make([]byte, count)
+	var err error
+	for cnt < count {
+		r, err := f.Read(data)
+		if err != nil {
+			if err == io.EOF {
+				return 0, err
+			}
+			if err == syscall.EINTR {
+				continue
+			}
+			return -1, err
+		}
+		cnt += int64(r)
+		*buf += string(data)
+	}
+	return cnt, err
+}
+
+func SafeReadFile(base string, file string, val *string, valLen int64) int64 {
+	fn := base + file
+	f, openErr := os.OpenFile(fn, syscall.O_RDONLY, 0)
+	if openErr != nil {
+		return -1
+	}
+	len, readErr := SafeRead(f, val, valLen)
+	if readErr != nil {
+		for closeErr := f.Close(); closeErr != nil && syscall.EINTR == closeErr; closeErr = f.Close() {
+		}
+		return -2
+	}
+
+	for closeErr := f.Close(); closeErr != nil && syscall.EINTR == closeErr; closeErr = f.Close() {
+	}
+
+	return len
 }
