@@ -12,6 +12,43 @@ import (
 	"syscall"
 )
 
+func (bf *BlueFS) SetSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
+	bf.slowDevExpander = bfe
+}
+
+func (bf *BlueFS) AddBlockDevice(id int, devPath string) error {
+	log.Debug("bdev id %d and path %s.", id, devPath)
+
+	types.CreateBlockDevice(bf.Cct, devPath)
+	return nil
+}
+
+func (bf *BlueFS) BdevSupportLabel(id int) bool {
+	utils.AssertTrue(id < bf.bdev.Size())
+	utils.AssertTrue(nil != bf.bdev.At(int(id)))
+
+	return bf.bdev.At(id).(*types.BlockDevice).SupportedBdevLable()
+}
+
+func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
+	log.Debug("bdev id %d offset %d length %d.", id, offset, length)
+
+	utils.AssertTrue(id < bf.bdev.Size())
+	utils.AssertTrue(nil != bf.bdev.At(id))
+	utils.AssertTrue(id < bf.bdev.Size())
+}
+
+func (bf *BlueFS) GetBlockDeviceSize(deviceId int) uint64 {
+	utils.AssertTrue(deviceId < bf.bdev.Size())
+	utils.AssertTrue(nil != bf.bdev.At(int(deviceId)))
+
+	if deviceId < bf.bdev.Size() && nil != bf.bdev.At(int(deviceId)) {
+		return bf.bdev.At(deviceId).(*types.BlockDevice).GetBlockSize()
+	}
+
+	return 0
+}
+
 func initAlloc(bfs *BlueFS) {
 	bfs.alloc.ReSize(MaxBdev)          // make([]al.Allocator, MaxBdev)
 	bfs.allocSize.ReSize(MaxBdev)      //  = make([]uint64, 0, MaxBdev)

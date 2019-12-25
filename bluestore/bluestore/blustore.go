@@ -2,6 +2,7 @@ package bluestore
 
 import (
 	"fmt"
+	"github.com/go-bluestore/bluestore/bluefs"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
@@ -117,7 +118,6 @@ func (bs *BlueStore) readFsid(uuid types.UUID) int {
 func (bs *BlueStore) lockFsid() int {
 	return 0
 }
-
 
 func (bs *BlueStore) openDb(create bool) int {
 	return 0
@@ -447,7 +447,7 @@ func (bs *BlueStore) setCacheSize() error {
 		return syscall.EINVAL
 	}
 
-	if bs.cacheMetaRation + bs.cacheKVRatio > 1.0 {
+	if bs.cacheMetaRation+bs.cacheKVRatio > 1.0 {
 		log.Error("sum of BlueStoreCacheMetaRation and BlueStoreCacheKVRatio must in range [0, 1.0]")
 		return syscall.EINVAL
 	}
@@ -472,7 +472,7 @@ func (bs *BlueStore) openBdev(create bool) error {
 	bs.bdev = types.CreateBlockDevice(bs.Cct, p)
 
 	r = bs.bdev.Open(p)
-	if nil != r  {
+	if nil != r {
 		log.Error("open path %s failed with %v.", p, r)
 		goto fail
 	}
@@ -487,7 +487,7 @@ func (bs *BlueStore) openBdev(create bool) error {
 	bs.blockSize = bs.bdev.GetBlockSize()
 	bs.blockMask = ^(bs.blockSize - 1)
 	bs.blockSizeOrder = utils.Ctx(bs.blockMask)
-	utils.AssertTrue(bs.blockSize == 1 << bs.blockSizeOrder)
+	utils.AssertTrue(bs.blockSize == 1<<bs.blockSizeOrder)
 
 	r = bs.setCacheSize()
 	if r != nil {
@@ -503,8 +503,91 @@ fail:
 	return r
 }
 
-func (bs *BlueStore) openDB() error {
+func (bs *BlueStore) openDB(create bool) error {
 	utils.AssertTrue(bs.db == nil)
+
+	var e error
+
+	// 1. get kv_backend type
+	var kvBackend string
+	if create {
+		kvBackend = bs.Cct.Conf.BlueStoreKVBackend
+	} else {
+		r := bs.ReadMeta("kv_backend", &kvBackend)
+		if r < 0 {
+			log.Error("unable to read kv_backend meta.")
+			return syscall.EIO
+		}
+	}
+
+	log.Info("kv_backend = %s.", kvBackend)
+
+	// 2. prepare bluefs for rockdb
+	var doBlueFs bool
+	if create {
+		doBlueFs = bs.Cct.Conf.BlueStoreBlueFs
+	} else {
+		var blueFsFlag string
+		r := bs.ReadMeta("bluefs", &blueFsFlag)
+		if r < 0 {
+			log.Error("unable to read bluefs meta.")
+			return syscall.EIO
+		}
+
+		if "1" == blueFsFlag {
+			doBlueFs = true
+		} else if "0" == blueFsFlag {
+			doBlueFs = false
+		} else {
+			log.Error("bluefs = %v, not 0 or 1, so aborting.", doBlueFs)
+			return syscall.EIO
+		}
+	}
+
+	log.Info("bluefs = %v.", doBlueFs)
+
+	// prepare bluefs Env for rockdb
+	if doBlueFs {
+		log.Debug("initialing bluefs")
+		if "rockdb" != kvBackend {
+			log.Error("backend must be rockdb to use bluefs.")
+			return syscall.EINVAL
+		}
+
+		bs.blueFs = bluefs.CreateBlueFS(bs.Cct)
+		bs.blueFs.SetSlowDeviceExpander(&bs.BlueFSDeviceExpander)
+
+		var bfn string
+		var st syscall.Stat_t
+
+		// block.db store meta data for bluestore
+		bfn = bs.Path + "/block.db"
+		if nil == syscall.Stat(bfn, &st) {
+			e = bs.blueFs.AddBlockDevice(bluefs.BdevDb, bfn)
+			if nil != e {
+				log.Error("add block device %s failed with err %v.", bfn, e)
+				goto freeBlueFs
+			}
+
+			if bs.blueFs.BdevSupportLabel(bluefs.BdevDb) {
+				e = bs.checkOrSetBdevLabel(bfn, bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb), "bluefs db", create)
+				if nil != e {
+					log.Error("check block device %s lable return %v.", bfn, e)
+					goto freeBlueFs
+				}
+			}
+
+			if create {
+				//bs.blueFs.AddBlockDevice()
+			}
+		}
+
+	}
+
+freeBlueFs:
+	utils.AssertTrue(nil != bs.blueFs)
+	bs.blueFs = nil
+
 	return nil
 }
 
@@ -610,7 +693,7 @@ func (bs *BlueStore) Mkfs() error {
 		goto outCloseFsId
 	}
 
-	if bs.Cct.Conf.BlueStoreMinAllocSize > 0{
+	if bs.Cct.Conf.BlueStoreMinAllocSize > 0 {
 		bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSize
 	} else {
 		utils.AssertTrue(nil != bs.bdev)

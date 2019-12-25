@@ -4,7 +4,6 @@ import (
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	"github.com/go-bluestore/bluestore/types"
 	ctypes "github.com/go-bluestore/common/types"
-	"github.com/go-bluestore/log"
 	"sync"
 )
 
@@ -180,16 +179,6 @@ func CreateBlueFS(cct *types.CephContext) (blueFs *BlueFS) {
 	blueFs.allocSize.Init()
 	blueFs.pendingRelease.Init()
 	return blueFs
-}
-
-func (bf *BlueFS) SetSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
-	bf.slowDevExpander = bfe
-}
-
-func (bf *BlueFS) addBlockDevice(deviceId uint8, devPath string) {
-	log.Debug("bdev id %d and path %s.", deviceId, devPath)
-
-	types.CreateBlockDevice(bf.Cct, devPath)
 }
 
 func getSuperOffset() uint64 {

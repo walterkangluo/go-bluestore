@@ -175,44 +175,43 @@ type BlueStore struct {
 	Path          string
 	MemPoolThread *thread_pool.MempoolThread
 
-// private
-	blueFs  *bluefs.BlueFS
-	blueFsSharedBdev uint
-	blueFsSingleSharedDevice bool
-	blueFsLastBalance time.Time
+	// private
+	blueFs                         *bluefs.BlueFS
+	blueFsSharedBdev               uint
+	blueFsSingleSharedDevice       bool
+	blueFsLastBalance              time.Time
 	nextDumpOnBlueFsBalanceFailure time.Time
 
-	db *types.KeyValueDB
-	bdev *types.BlockDevice
+	db           *types.KeyValueDB
+	bdev         *types.BlockDevice
 	freeListType string
 	// FreeListManage
-	alloc *allocator.Allocator
-	fsId types.UUID
-	pathFd int
-	fsIdFd int
+	alloc   *allocator.Allocator
+	fsId    types.UUID
+	pathFd  int
+	fsIdFd  int
 	mounted bool
 
 	collLock sync.RWMutex
 
-	blockSize uint64
-	blockMask uint64
+	blockSize      uint64
+	blockMask      uint64
 	blockSizeOrder uint
-	minAllocSize uint64
+	minAllocSize   uint64
 
 	// cache trim control
-	cacheSize uint64
-	cacheMetaRation float64
-	cacheKVRatio float64
-	cacheDataRatio float64
-	cacheAutotune bool
-	cacheAutotuneChunkSize uint64
-	cacheAutotuneInterval float64
-	osdMemoryTarget uint64
-	osdMemoryBase uint64
+	cacheSize                      uint64
+	cacheMetaRation                float64
+	cacheKVRatio                   float64
+	cacheDataRatio                 float64
+	cacheAutotune                  bool
+	cacheAutotuneChunkSize         uint64
+	cacheAutotuneInterval          float64
+	osdMemoryTarget                uint64
+	osdMemoryBase                  uint64
 	osdMemoryExpectedFragmentation float64
-	osdCacheCacheMin uint64
-	osdMemoryCacheResizeInterval uint64
-
+	osdCacheCacheMin               uint64
+	osdMemoryCacheResizeInterval   uint64
 }
 
 type ONode struct {

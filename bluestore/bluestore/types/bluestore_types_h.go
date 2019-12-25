@@ -12,11 +12,11 @@ type BlueStoreIntervalT struct {
 }
 
 type BluestoreBdevLabelT struct {
-	OsdUUID types2.UUID
-	Size uint64
-	BTime time.Time
+	OsdUUID     types2.UUID
+	Size        uint64
+	BTime       time.Time
 	Description string
-	Meta *types.MapList
+	Meta        *types.MapList
 }
 
 func CreateBlueStoreIntervalT(o uint64, l uint64) *BlueStoreIntervalT {
