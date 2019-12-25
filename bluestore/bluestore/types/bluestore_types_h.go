@@ -1,6 +1,10 @@
 package types
 
-import "github.com/go-bluestore/common/types"
+import (
+	types2 "github.com/go-bluestore/bluestore/types"
+	"github.com/go-bluestore/common/types"
+	"time"
+)
 
 type BlueStoreIntervalT struct {
 	Offset uint64
@@ -8,6 +12,10 @@ type BlueStoreIntervalT struct {
 }
 
 type BluestoreBdevLabelT struct {
+	OsdUUID types2.UUID
+	Size uint64
+	BTime time.Time
+	Description string
 	Meta *types.MapList
 }
 

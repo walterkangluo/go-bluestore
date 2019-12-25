@@ -78,8 +78,8 @@ func (bf *BlueFsFnodeT) AppendExtent(ext *BlueFsExtentT) {
 // TODO: add other method
 
 type BlueFsSuperT struct {
-	Uuid      types.UuidD
-	OsdUuid   types.UuidD
+	Uuid      types.UUID
+	OsdUuid   types.UUID
 	Version   uint64
 	BlockSize uint32
 	LogFnode  BlueFsFnodeT
@@ -102,7 +102,7 @@ func (bs *BlueFsSuperT) blockMask() uint64 {
 }
 
 type BlueFsTransactionT struct {
-	Uuid types.UuidD
+	Uuid types.UUID
 	Seq  uint64
 	opBl ctypes.BufferList
 }

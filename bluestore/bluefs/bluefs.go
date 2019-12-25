@@ -72,10 +72,10 @@ func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) error
 		}
 		extents.Reserve(4)
 		allocLen = bfs.alloc.At(int(id)).(al.Allocator).Allocate(
-			uint64(utils.ROUND_UP_TO(int64(l), bfs.allocSize.At(int(id)).(int64))), bfs.allocSize.At(int(id)).(int64), int64(hInt), &extents)
+			uint64(utils.RoundUpTo(int64(l), bfs.allocSize.At(int(id)).(int64))), bfs.allocSize.At(int(id)).(int64), int64(hInt), &extents)
 	}
 
-	if nil == bfs.alloc.At(int(id)) || allocLen < 0 || allocLen < int64(utils.ROUND_UP_TO(int64(l), int64(bfs.allocSize.At(int(id)).(int64)))) {
+	if nil == bfs.alloc.At(int(id)) || allocLen < 0 || allocLen < int64(utils.RoundUpTo(int64(l), int64(bfs.allocSize.At(int(id)).(int64)))) {
 		if allocLen > 0 {
 			bfs.alloc.At(int(id)).(al.Allocator).Release(extents)
 		}
@@ -160,7 +160,7 @@ func (bfs *BlueFS) shutdownLogger() {
 	bfs.logger = nil
 }
 
-func (bfs *BlueFS) mkfs(osdUuid types.UuidD) {
+func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
 	log.Debug("osd uuid is %v", osdUuid.UUID)
 	var l sync.Mutex
 	initAlloc(bfs)
@@ -169,7 +169,7 @@ func (bfs *BlueFS) mkfs(osdUuid types.UuidD) {
 
 	super := btypes.BlueFsSuperT{
 		Version:   uint64(1),
-		BlockSize: bfs.bdev.At(BdevDb).(*types.BlockDevice).GetBlockSize(),
+		BlockSize: uint32(bfs.bdev.At(BdevDb).(*types.BlockDevice).GetBlockSize()),
 		OsdUuid:   osdUuid,
 		Uuid:      types.GenerateRandomUuid(),
 	}

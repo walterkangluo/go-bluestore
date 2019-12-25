@@ -5,20 +5,20 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-type UuidD struct {
+type UUID struct {
 	uuid.UUID
 }
 
-func GenerateRandomUuid() UuidD {
+func GenerateRandomUuid() UUID {
 	u2, err := uuid.NewV4()
 	if nil != err {
 		panic("generate uuid error")
 	}
 
-	return UuidD{u2}
+	return UUID{u2}
 }
 
-func (u *UuidD) IsZero() bool {
+func (u *UUID) IsZero() bool {
 	var temp uuid.UUID
 
 	return bytes.Equal(u.UUID[:], temp[:])

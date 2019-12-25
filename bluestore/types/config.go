@@ -20,5 +20,32 @@ type MdConfigT struct {
 	BlueStoreBlockDbSize          uint64
 	BlueStoreBlockDbCreate        bool
 	BlueStoreBlueFs               bool
+	BlueStoreDebugPermitAnyBdevLabel bool
 	OsdMaxObjectSize              uint32
+
+	BlueStoreCacheSize uint64
+	BlueStoreCacheSizeHdd uint64
+	BlueStoreCacheSizeSSd uint64
+	BlueStoreCacheMetaRation float64
+	BlueStoreCacheKVRatio float64
+	BlueStoreCacheAutotune bool
+	BlueStoreCacheAutotuneChunkSize uint64
+	BlueStoreCacheAutotuneInterval float64
+	BlueStoreOsdMemoryTarget uint64
+	OsdMemoryBase uint64
+	OsdMemoryTarget uint64
+	OsdMemoryExpectedFragmentation float64
+	OsdCacheCacheMin uint64
+	OsdMemoryCacheResizeInterval uint64
+
+	BlueStoreMinAllocSize uint64
+	BlueStoreMinAllocSizeHdd uint64
+	BlueStoreMinAllocSizeSSd uint64
+
+}
+
+func (md *MdConfigT)GetVal(key interface{}) interface{} {
+	switch key.(type) {
+	}
+	return nil
 }

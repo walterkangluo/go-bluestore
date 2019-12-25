@@ -59,16 +59,16 @@ func CreateBlockDevice(cct *CephContext, path string) *BlockDevice {
 	}
 }
 
-func (*BlockDevice) Open(path string) {
-
+func (*BlockDevice) Open(path string) error {
+	return nil
 }
 
 func (bd *BlockDevice) GetSize() uint64 {
 	return uint64(1)
 }
 
-func (bd *BlockDevice) GetBlockSize() uint32 {
-	return uint32(1)
+func (bd *BlockDevice) GetBlockSize() uint64 {
+	return uint64(1)
 }
 
 func (bd *BlockDevice) Write(off uint64, bl types.BufferList, buffered bool) {
@@ -77,5 +77,16 @@ func (bd *BlockDevice) Write(off uint64, bl types.BufferList, buffered bool) {
 func (bd *BlockDevice) Flush() {
 }
 
+func (bd *BlockDevice) Close() {
+}
+
 func (bd *BlockDevice) QueueReapIoc() {
+}
+
+func (bd *BlockDevice) SupportedBdevLable() bool {
+	return true
+}
+
+func (bd *BlockDevice) IsRotational() bool {
+	return true
 }

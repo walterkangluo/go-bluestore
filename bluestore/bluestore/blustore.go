@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -109,7 +110,7 @@ func (bs *BlueStore) openFsid(create bool) int {
 	return 0
 }
 
-func (bs *BlueStore) readFsid(uuid types.UuidD) int {
+func (bs *BlueStore) readFsid(uuid types.UUID) int {
 	return 0
 }
 
@@ -117,9 +118,6 @@ func (bs *BlueStore) lockFsid() int {
 	return 0
 }
 
-func (bs *BlueStore) openBdev(create bool) int {
-	return 0
-}
 
 func (bs *BlueStore) openDb(create bool) int {
 	return 0
@@ -201,7 +199,7 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 	log.Debug("path %s", bs.Path)
 
 	bs.KvOnly = kvOnly
-
+	var e error
 	var mType string
 	r := bs.ReadMeta("type", &mType)
 	if r < 0 {
@@ -239,13 +237,13 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 		goto outPath
 	}
 
-	r = bs.readFsid(bs.Fsid)
+	r = bs.readFsid(bs.fsId)
 	if r < 0 {
 		goto outFsid
 	}
 
-	r = bs.openBdev(false)
-	if r < 0 {
+	e = bs.openBdev(false)
+	if nil != e {
 		goto outFsid
 	}
 
@@ -283,7 +281,7 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 		goto outColl
 	}
 
-	if bs.BlueFS != nil {
+	if bs.blueFs != nil {
 		r = bs.reconcileBluefsFreespace()
 		if r < 0 {
 			goto outColl
@@ -386,10 +384,134 @@ func (bs *BlueStore) setupBlockSymlinkOrFile(name string, epath string, size uin
 	return nil
 }
 
+func (bs *BlueStore) checkOrSetBdevLabel(path string, size uint64, desc string, create bool) error {
+	var label btypes.BluestoreBdevLabelT
+	var r int
+	if create {
+		label.OsdUUID = bs.fsId
+		label.Size = size
+		label.BTime = time.Now()
+		label.Description = desc
+
+		r = bs.readBdevLabel(bs.Cct, bs.Path, &label)
+		if r < 0 {
+			return fmt.Errorf("%d", r)
+		}
+	} else {
+		r = bs.readBdevLabel(bs.Cct, bs.Path, &label)
+		if r < 0 {
+			return fmt.Errorf("%d", r)
+		}
+
+		if bs.Cct.Conf.BlueStoreDebugPermitAnyBdevLabel {
+			log.Debug("bdev %s osdid %v fsid %v check passed.", bs.Path, label.OsdUUID, bs.fsId)
+		} else {
+			log.Error("bdev %s osdid %v does not match out fsid %v.", path, label.OsdUUID, bs.fsId)
+			return syscall.EIO
+		}
+	}
+	return nil
+}
+
+func (bs *BlueStore) setCacheSize() error {
+	utils.AssertTrue(bs.bdev != nil)
+
+	bs.cacheAutotune = bs.Cct.Conf.BlueStoreCacheAutotune
+	bs.cacheAutotuneChunkSize = bs.Cct.Conf.BlueStoreCacheAutotuneChunkSize
+	bs.cacheAutotuneInterval = bs.Cct.Conf.BlueStoreCacheAutotuneInterval
+	bs.osdMemoryTarget = bs.Cct.Conf.OsdMemoryTarget
+	bs.osdMemoryBase = bs.Cct.Conf.OsdMemoryBase
+	bs.osdMemoryExpectedFragmentation = bs.Cct.Conf.OsdMemoryExpectedFragmentation
+	bs.osdCacheCacheMin = bs.Cct.Conf.OsdCacheCacheMin
+	bs.osdMemoryCacheResizeInterval = bs.Cct.Conf.OsdMemoryCacheResizeInterval
+
+	if bs.Cct.Conf.BlueStoreCacheSize > 0 {
+		bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSize
+	} else {
+		if bs.bdev.SupportedBdevLable() {
+			bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSizeHdd
+		} else {
+			bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSizeSSd
+		}
+	}
+
+	bs.cacheMetaRation = bs.Cct.Conf.BlueStoreCacheMetaRation
+	if bs.cacheMetaRation < 0 || bs.cacheMetaRation > 1.0 {
+		log.Error("BlueStoreCacheMetaRation must in range [0, 1.0]")
+		return syscall.EINVAL
+	}
+
+	bs.cacheKVRatio = bs.Cct.Conf.BlueStoreCacheKVRatio
+	if bs.cacheKVRatio < 0 || bs.cacheKVRatio > 1.0 {
+		log.Error("BlueStoreCacheKVRatio must in range [0, 1.0]")
+		return syscall.EINVAL
+	}
+
+	if bs.cacheMetaRation + bs.cacheKVRatio > 1.0 {
+		log.Error("sum of BlueStoreCacheMetaRation and BlueStoreCacheKVRatio must in range [0, 1.0]")
+		return syscall.EINVAL
+	}
+
+	bs.cacheDataRatio = 1.0 - bs.cacheMetaRation - bs.cacheKVRatio
+	if 0 > bs.cacheDataRatio {
+		bs.cacheDataRatio = 0
+	}
+
+	log.Debug("cache_size %d, meta %f, kv %f, data %f.",
+		bs.cacheSize, bs.cacheMetaRation, bs.BlueStoreCacheKVRatio, bs.cacheDataRatio)
+
+	return nil
+}
+
+func (bs *BlueStore) openBdev(create bool) error {
+	var r error
+	utils.AssertTrue(nil == bs.bdev)
+
+	p := bs.Path + "/block"
+	// TODO: implement create BlocDevice
+	bs.bdev = types.CreateBlockDevice(bs.Cct, p)
+
+	r = bs.bdev.Open(p)
+	if nil != r  {
+		log.Error("open path %s failed with %v.", p, r)
+		goto fail
+	}
+
+	if bs.bdev.SupportedBdevLable() {
+		r = bs.checkOrSetBdevLabel(p, bs.bdev.GetSize(), "main", create)
+		if nil != r {
+			goto failclose
+		}
+	}
+
+	bs.blockSize = bs.bdev.GetBlockSize()
+	bs.blockMask = ^(bs.blockSize - 1)
+	bs.blockSizeOrder = utils.Ctx(bs.blockMask)
+	utils.AssertTrue(bs.blockSize == 1 << bs.blockSizeOrder)
+
+	r = bs.setCacheSize()
+	if r != nil {
+		goto failclose
+	}
+
+	return nil
+
+failclose:
+	bs.bdev.Close()
+fail:
+	bs.bdev = nil
+	return r
+}
+
+func (bs *BlueStore) openDB() error {
+	utils.AssertTrue(bs.db == nil)
+	return nil
+}
+
 func (bs *BlueStore) Mkfs() error {
 	var r int
 	var e error
-	var oldFsId types.UuidD
+	var oldFsId types.UUID
 	// var freeListType = "bitmap"
 
 	log.Debug("path is %s.", bs.Path)
@@ -432,29 +554,34 @@ func (bs *BlueStore) Mkfs() error {
 
 	r = bs.openPath()
 	if r < 0 {
+		return syscall.Errno(r)
+	}
+
+	r = bs.openFsid(true)
+	if r < 0 {
 		goto outPathFd
 	}
 
 	r = bs.lockFsid()
 	if r < 0 {
-		goto outCloseFd
+		goto outCloseFsId
 	}
 
 	r = bs.readFsid(oldFsId)
 	if r < 0 || oldFsId.IsZero() {
-		if bs.Fsid.IsZero() {
-			bs.Fsid = types.GenerateRandomUuid()
-			log.Debug("generate fsid is %x.", bs.Fsid)
+		if bs.fsId.IsZero() {
+			bs.fsId = types.GenerateRandomUuid()
+			log.Debug("generate fsid is %x.", bs.fsId)
 		} else {
-			log.Debug("using provided fsid %x.", bs.Fsid)
+			log.Debug("using provided fsid %x.", bs.fsId)
 		}
 	} else {
-		if !bs.Fsid.IsZero() && bs.Fsid != oldFsId {
-			log.Error("ondisk uuid %x != provided %x.", oldFsId, bs.Fsid)
+		if !bs.fsId.IsZero() && bs.fsId != oldFsId {
+			log.Error("ondisk uuid %x != provided %x.", oldFsId, bs.fsId)
 			//r = -syscall.EINVAL
 			r = -0x16
 		}
-		bs.Fsid = oldFsId
+		bs.fsId = oldFsId
 	}
 
 	e = bs.setupBlockSymlinkOrFile(
@@ -477,8 +604,30 @@ func (bs *BlueStore) Mkfs() error {
 		}
 	}
 
-outCloseFd:
-	bs.closeFm()
+	e = bs.openBdev(true)
+	if e != nil {
+		goto outCloseFsId
+	}
+
+	if bs.Cct.Conf.BlueStoreMinAllocSize > 0{
+		bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSize
+	} else {
+		utils.AssertTrue(nil != bs.bdev)
+		if bs.bdev.IsRotational() {
+			bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSizeHdd
+		} else {
+			bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSizeSSd
+		}
+	}
+
+	if !utils.ISP2(bs.minAllocSize) {
+		log.Error("min_alloc_size %x is not power of 2 aligned!", bs.minAllocSize)
+		e = syscall.EINVAL
+		goto outCloseBdev
+	}
+
+outCloseBdev:
+	bs.closeBdev()
 outCloseFsId:
 	bs.closeFsid()
 outPathFd:

@@ -12,7 +12,7 @@ func TestGenerateRandomUuid(t *testing.T) {
 func TestUuidD_IsZero(t *testing.T) {
 	assert := assert.New(t)
 
-	var u UuidD
+	var u UUID
 
 	r := u.IsZero()
 	assert.True(r)
