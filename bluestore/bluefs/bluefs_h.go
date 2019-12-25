@@ -129,7 +129,25 @@ func (bi blockInfo) GetLen() uint64 {
 	return bi.len
 }
 
-type blockInfoList []blockInfo
+//type blockInfoList []blockInfo
+
+type blockInfoList struct {
+	segment []blockInfo
+	size uint32
+}
+
+func (bl *blockInfoList) insert(offset uint64, length uint64) {
+	b := blockInfo{
+		start: offset,
+		len: length,
+	}
+	bl.segment = append(bl.segment, b)
+	bl.size++
+}
+
+func (bl *blockInfoList) empty() bool {
+	return bl.size == 0
+}
 
 type BlueFS struct {
 	Cct *types.CephContext
@@ -159,8 +177,8 @@ type BlueFS struct {
 	 */
 	bdev           *ctypes.Vector   // *types.BlockDevice
 	ioc            *ctypes.Vector   // types.IOContext
-	blockAll       []*ctypes.Vector // []blockInfoList
-	blockTotal     *ctypes.Vector   // []uint64
+	blockAll       []blockInfoList  // []blockInfoList
+	blockTotal     []uint64         // []uint64
 	alloc          *ctypes.Vector   // []allocator.Allocator
 	allocSize      *ctypes.Vector   // []uint64
 	pendingRelease *ctypes.Vector   // []uint64
@@ -171,10 +189,10 @@ type BlueFS struct {
 func CreateBlueFS(cct *types.CephContext) (blueFs *BlueFS) {
 	blueFs.Cct = cct
 
-	blueFs.blockAll = make([]*ctypes.Vector, 0)
+	blueFs.blockAll = make([]blockInfoList, 0)
 	blueFs.bdev.Init()
 	blueFs.ioc.Init()
-	blueFs.blockTotal.Init()
+	blueFs.blockTotal = make([]uint64, 0)
 	blueFs.alloc.Init()
 	blueFs.allocSize.Init()
 	blueFs.pendingRelease.Init()

@@ -35,7 +35,12 @@ func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
 
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil != bf.bdev.At(id))
-	utils.AssertTrue(id < bf.bdev.Size())
+	utils.AssertTrue(bf.bdev.At(id).(*types.BlockDevice).GetSize() >= offset + length)
+
+	bf.blockAll[id].insert(offset, length)
+	bf.blockTotal[id] += length
+
+
 }
 
 func (bf *BlueFS) GetBlockDeviceSize(deviceId int) uint64 {
@@ -84,10 +89,10 @@ func initAlloc(bfs *BlueFS) {
 		bfs.alloc.SetAt(id, allocator)
 		blockAll := bfs.blockAll[id]
 
-		for i := 0; i < blockAll.Size(); i++ {
-			block := blockAll.At(i).(blockInfo)
-			log.Debug("index %d and block start is %d and end is %d.", i, block.GetStart(), block.GetLen())
-			bfs.alloc.At(id).(al.Allocator).InitAddFree(block.GetStart(), block.GetLen())
+		for i := uint32(0); i < blockAll.size; i++ {
+			segment := blockAll.segment[i]
+			log.Debug("index %d and block start is %d and end is %d.", i, segment.GetStart(), segment.GetLen())
+			bfs.alloc.At(id).(al.Allocator).InitAddFree(segment.GetStart(), segment.GetLen())
 		}
 	}
 }
@@ -224,15 +229,14 @@ func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
 	for i := 0; i < MaxBdev; i++ {
 		p := bfs.blockAll[i]
 
-		if p.Empty() {
+		if p.empty() {
 			continue
 		}
 
-		for j := 0; j < p.Size(); j++ {
-			pp := p.At(j).(blockInfo)
-
-			log.Debug("op alloc add start[%x] and length[%x].", pp.GetStart(), pp.GetLen())
-			bfs.logT.OpAllocAdd(uint(i), pp.GetStart(), pp.GetLen())
+		for j := uint32(0); j < p.size; j++ {
+			seg := p.segment[j]
+			log.Debug("op alloc add start[%x] and length[%x].", seg.GetStart(), seg.GetLen())
+			bfs.logT.OpAllocAdd(uint(i), seg.GetStart(), seg.GetLen())
 		}
 	}
 
@@ -246,7 +250,7 @@ func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
 	bfs.closeWriter()
 	bfs.logWriter = nil
 	//bfs.blockAll
-	bfs.blockTotal.Clear()
+	bfs.blockTotal = make([]uint64, 0)
 	bfs.stopAlloc()
 	bfs.shutdownLogger()
 
