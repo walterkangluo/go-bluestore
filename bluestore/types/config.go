@@ -1,27 +1,31 @@
 package types
 
 type MdConfigT struct {
-	BlueFsAllocSize                  uint64
-	BlueFsSharedAllocSize            uint64
-	BlueFsAllocator                  string
-	BlueFsMaxLogRunaway              uint64
-	BlueStoreFsckOnMount             bool
-	BlueStoreFsckOnMountDeep         bool
-	BlueStoreFsckOnMkfs              bool
-	BlueStoreFsckOnMkfsDeep          bool
-	BlueStoreBlockPreallocateSize    bool
-	BlueStoreBlockPath               string
-	BlueStoreBlockSize               uint64
-	BlueStoreBlockCreate             bool
-	BlueStoreBlockWalPath            string
-	BlueStoreBlockWalSize            uint64
-	BlueStoreBlockWalCreate          bool
-	BlueStoreBlockDbPath             string
-	BlueStoreBlockDbSize             uint64
-	BlueStoreBlockDbCreate           bool
-	BlueStoreBlueFs                  bool
-	BlueStoreDebugPermitAnyBdevLabel bool
-	OsdMaxObjectSize                 uint32
+	BlueFsAllocSize       uint64
+	BlueFsSharedAllocSize uint64
+	BlueFsAllocator       string
+	BlueFsMaxLogRunaway   uint64
+
+	BlueStoreBlueFs           bool
+	BlueStoreBlueFsMinRation  float64
+	BlueStoreBlueFsGiftRation float64
+	BlueStoreBlueFsMin        uint64
+	BlueStoreBlueFsEnvMirror  bool
+
+	BlueStoreFsckOnMount          bool
+	BlueStoreFsckOnMountDeep      bool
+	BlueStoreFsckOnMkfs           bool
+	BlueStoreFsckOnMkfsDeep       bool
+	BlueStoreBlockPreallocateSize bool
+	BlueStoreBlockPath            string
+	BlueStoreBlockSize            uint64
+	BlueStoreBlockCreate          bool
+	BlueStoreBlockWalPath         string
+	BlueStoreBlockWalSize         uint64
+	BlueStoreBlockWalCreate       bool
+	BlueStoreBlockDbPath          string
+	BlueStoreBlockDbSize          uint64
+	BlueStoreBlockDbCreate        bool
 
 	BlueStoreCacheSize              uint64
 	BlueStoreCacheSizeHdd           uint64
@@ -42,9 +46,14 @@ type MdConfigT struct {
 	BlueStoreMinAllocSizeHdd uint64
 	BlueStoreMinAllocSizeSSd uint64
 
+	BlueStoreDebugPermitAnyBdevLabel bool
+	OsdMaxObjectSize                 uint32
+
 	BlueStoreKVBackend string
 
 	BdevAioMaxQueueDepth int
+	Perf                 bool
+	RockDBSeperateWalDir bool
 }
 
 func (md *MdConfigT) GetVal(key interface{}) interface{} {

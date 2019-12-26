@@ -17,6 +17,9 @@ const (
 	WriteUnknown = 0
 	WriteWal     = 1
 	WriteSst     = 2
+
+	lBlueFsFirst     = 732600
+	lBlueFsGiftBytes = 732601
 )
 
 type BlueFSDeviceExpander struct {
@@ -157,7 +160,9 @@ type BlueFS struct {
 	logger  *types.PerfCounters
 	dirMap  map[string]dirRef
 	fileMap map[uint64]fileRef
+
 	//TODO: dirtyFiles dirty_file_list unknown
+	dirtyFiles   map[uint64]interface{}
 	super        *btypes.BlueFsSuperT
 	inoLast      uint64
 	logSeq       uint64

@@ -10,6 +10,7 @@ import (
 	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
+	"math"
 	"os"
 	"strings"
 	"syscall"
@@ -18,7 +19,9 @@ import (
 )
 
 const (
-	ObjectMaxSize = 0xffffffff
+	ObjectMaxSize      = 0xffffffff
+	SuperReserved      = 8192
+	BdevLabelBlockSize = 4096
 )
 
 type SbInfoT struct {
@@ -514,7 +517,7 @@ fail:
 func (bs *BlueStore) openDB(create bool) error {
 	utils.AssertTrue(bs.db == nil)
 
-	var e error
+	var r error
 
 	// 1. get kv_backend type
 	var kvBackend string
@@ -571,23 +574,107 @@ func (bs *BlueStore) openDB(create bool) error {
 		// block.db store meta data for bluestore
 		bfn = bs.Path + "/block.db"
 		if nil == syscall.Stat(bfn, &st) {
-			e = bs.blueFs.AddBlockDevice(bluefs.BdevDb, bfn)
-			if nil != e {
-				log.Error("add block device %s failed with err %v.", bfn, e)
+			r = bs.blueFs.AddBlockDevice(bluefs.BdevDb, bfn)
+			if nil != r {
+				log.Error("add block device %s failed with err %v.", bfn, r)
 				goto freeBlueFs
 			}
 
 			if bs.blueFs.BdevSupportLabel(bluefs.BdevDb) {
-				e = bs.checkOrSetBdevLabel(bfn, bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb), "bluefs db", create)
-				if nil != e {
-					log.Error("check block device %s lable return %v.", bfn, e)
+				r = bs.checkOrSetBdevLabel(bfn, bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb), "bluefs db", create)
+				if nil != r {
+					log.Error("check block device %s lable return %v.", bfn, r)
 					goto freeBlueFs
 				}
 			}
 
 			if create {
-				//bs.blueFs.AddBlockDevice()
+				bs.blueFs.AddBlockExtent(bluefs.BdevDb, SuperReserved, bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb)-SuperReserved)
 			}
+
+			bs.blueFsSharedBdev = bluefs.BdevSlow
+			bs.blueFsSingleSharedDevice = false
+		} else {
+
+			r = syscall.Lstat(bfn, &st)
+			if r != nil {
+				bs.blueFsSharedBdev = bluefs.BdevDb
+			} else {
+				log.Error("%s symlink exists but target unusable: %v.", bfn, r)
+				goto freeBlueFs
+			}
+		}
+
+		// block to store object data
+		bfn = bs.Path + "/block"
+		r = bs.blueFs.AddBlockDevice(bs.blueFsSharedBdev, bfn)
+		if nil != r {
+			log.Error("add block device %s return %v.", bfn, r)
+			goto freeBlueFs
+		}
+		if create {
+			initial := (float64(bs.bdev.GetSize())) * (bs.Cct.Conf.BlueStoreBlueFsMinRation + bs.Cct.Conf.BlueStoreBlueFsGiftRation)
+			initial = math.Max(initial, float64(bs.Cct.Conf.BlueStoreBlueFsMin))
+			if 0 != bs.Cct.Conf.BlueFsAllocSize%bs.minAllocSize {
+				r = syscall.EINVAL
+				log.Error("bluefs_alloc_size %x is not mutiple of min_alloc_size %x.", bs.Cct.Conf.BlueFsAllocSize, bs.minAllocSize)
+				goto freeBlueFs
+			}
+
+			initial = float64(utils.P2RoundUp(uint64(initial), bs.Cct.Conf.BlueFsAllocSize))
+			start := utils.P2Align((bs.bdev.GetSize()-uint64(initial))/2, bs.Cct.Conf.BlueFsAllocSize)
+			bs.blueFs.AddBlockExtent(bs.blueFsSharedBdev, start, uint64(initial))
+			bs.blueFsExtents = append(bs.blueFsExtents, Extents{start: start, length: uint64(initial)})
+		}
+
+		// block.wal to store log file of rockdb
+		bfn = bs.Path + "/block.wal"
+		r = syscall.Stat(bfn, &st)
+		if r == nil {
+			r = bs.blueFs.AddBlockDevice(bluefs.BdevWal, bfn)
+			if r != nil {
+				log.Error("add block device %s return %v.", bfn, r)
+				goto freeBlueFs
+			}
+
+			if bs.blueFs.BdevSupportLabel(bluefs.BdevWal) {
+				r = bs.checkOrSetBdevLabel(bfn, bs.blueFs.GetBlockDeviceSize(bluefs.BdevWal), "bluefs wal", create)
+				if r != nil {
+					log.Error("check block device %s label returned: %v.", bfn, r)
+					goto freeBlueFs
+				}
+			}
+
+			if create {
+				bs.blueFs.AddBlockExtent(bs.blueFsSharedBdev, BdevLabelBlockSize, bs.blueFs.GetBlockDeviceSize(bluefs.BdevWal)-BdevLabelBlockSize)
+			}
+
+			bs.Cct.Conf.RockDBSeperateWalDir = true
+			bs.blueFsSingleSharedDevice = false
+		} else {
+			r = syscall.Lstat(bfn, &st)
+			if r == nil {
+				bs.Cct.Conf.RockDBSeperateWalDir = false
+			} else {
+				log.Error("%s symlink exists, but target unusable: %v.", bfn, r)
+				goto freeBlueFs
+			}
+		}
+
+		if create {
+			bs.blueFs.Mkfs(bs.fsId)
+		}
+
+		// TODO: implement mount
+		r = bs.blueFs.Mount()
+		if nil != r {
+			log.Error("failed to mount: %v.", r)
+			goto freeBlueFs
+		}
+
+		if bs.Cct.Conf.BlueStoreBlueFsEnvMirror {
+			// TODO: implement rockdB env
+			goto freeBlueFs
 		}
 
 	}

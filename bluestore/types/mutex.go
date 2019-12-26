@@ -9,14 +9,14 @@ type Mutex struct {
 	name      string
 	id        int
 	recursive bool
-	lockdep   bool
+	lockDep   bool
 	backtrace bool
 
 	m      sync.Mutex
 	nlock  int
 	lockBy sync.Mutex
 	cct    *CephContext
-	logger PerfCounters
+	logger *PerfCounters
 }
 
 func (mu *Mutex) New(name string, a ...interface{}) {
@@ -24,7 +24,7 @@ func (mu *Mutex) New(name string, a ...interface{}) {
 
 	if len(a) == 0 {
 		mu.recursive = false
-		mu.lockdep = true
+		mu.lockDep = true
 		mu.backtrace = false
 		mu.cct = nil
 	}

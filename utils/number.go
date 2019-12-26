@@ -31,3 +31,11 @@ func Ctx(n uint64) uint {
 
 	return i
 }
+
+func P2RoundUp(x uint64, align uint64) uint64 {
+	return -(-x & -align)
+}
+
+func P2Align(x uint64, align uint64) uint64 {
+	return x & -align
+}

@@ -16,15 +16,23 @@ func (bf *BlueFS) SetSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
 	bf.slowDevExpander = bfe
 }
 
-func (bf *BlueFS) AddBlockDevice(id int, devPath string) error {
-	log.Debug("bdev id %d and path %s.", id, devPath)
+func (bf *BlueFS) AddBlockDevice(id int, path string) error {
+	log.Debug("bdev id %d and path %s.", id, path)
 
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil == bf.bdev.At(id))
 
-	//b := blockdevice.CreateBlockDevice()
+	b := blockdevice.CreateBlockDevice(bf.Cct, path, nil, nil)
 
-	//blockdevice.CreateBlockDevice(bf.Cct, devPath)
+	r := b.Open(path)
+	if nil != r {
+		return r
+	}
+
+	log.Debug("bdev:%d, path:%s, size:%d.", id, path, b.GetSize())
+
+	bf.bdev.SetAt(id, b)
+	bf.ioc.SetAt(id, blockdevice.CreateIOContext(bf.Cct, nil, false))
 	return nil
 }
 
@@ -45,6 +53,19 @@ func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
 	bf.blockAll[id].insert(offset, length)
 	bf.blockTotal[id] += length
 
+	var l sync.Mutex
+	if id < bf.alloc.Size() && nil != bf.alloc.At(id) {
+		bf.logT.OpAllocAdd(uint(id), offset, length)
+		r := bf.flushAndSyncLog(&l, 0, 0)
+		utils.AssertTrue(r == nil)
+		bf.alloc.At(id).(al.Allocator).InitAddFree(offset, length)
+	}
+
+	if nil != bf.logger {
+		bf.logger.Inc(lBlueFsGiftBytes, length)
+	}
+
+	log.Debug("done")
 }
 
 func (bf *BlueFS) GetBlockDeviceSize(deviceId int) uint64 {
@@ -159,8 +180,23 @@ func (bfs *BlueFS) allocate(id uint8, l uint64, node *btypes.BlueFsFnodeT) error
 	return nil
 }
 
-func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64) {
+func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64) error {
+	for {
+		if bfs.logFlushing {
+			log.Debug("want_seq %d, log is currently flushing, waiting", wantSeq)
+			utils.AssertTrue(jumpTo == 0)
+			bfs.logCond.Wait()
+		}
+	}
+	/*
+		if wantSeq != 0 && wantSeq < bfs.logSeqStable {
+			log.Debug("want_seq %d <= logSeqStable %d, done", wantSeq, bfs.logSeqStable)
+			utils.AssertTrue(jumpTo == 0)
+			return nil
+		}
 
+		if bfs.logT.Empty() && bfs.dirtyFiles.
+	*/
 }
 
 func (bfs *BlueFS) writeSuper() {
@@ -206,7 +242,7 @@ func (bfs *BlueFS) shutdownLogger() {
 	bfs.logger = nil
 }
 
-func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
+func (bfs *BlueFS) Mkfs(osdUuid types.UUID) {
 	log.Debug("osd uuid is %v", osdUuid.UUID)
 	var l sync.Mutex
 	initAlloc(bfs)
@@ -259,4 +295,8 @@ func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
 	bfs.shutdownLogger()
 
 	log.Debug("make bluefs success")
+}
+
+func (bfs *BlueFS) Mount() error {
+	return nil
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/go-bluestore/bluestore/bluefs"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/thread_pool"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"sync"
-	"time"
 )
 
 const (
@@ -170,6 +170,11 @@ type TransContext struct {
 	AioContext
 }
 
+type Extents struct {
+	start  uint64
+	length uint64
+}
+
 type BlueStore struct {
 	types.ObjectStore
 	bluefs.BlueFSDeviceExpander
@@ -182,10 +187,10 @@ type BlueStore struct {
 
 	// private
 	blueFs                         *bluefs.BlueFS
-	blueFsSharedBdev               uint
+	blueFsSharedBdev               int
 	blueFsSingleSharedDevice       bool
-	blueFsLastBalance              time.Time
-	nextDumpOnBlueFsBalanceFailure time.Time
+	blueFsLastBalance              timestamp.Timestamp
+	nextDumpOnBlueFsBalanceFailure timestamp.Timestamp
 
 	db           *types.KeyValueDB
 	bdev         *blockdevice.BlockDevice
@@ -198,6 +203,9 @@ type BlueStore struct {
 	mounted bool
 
 	collLock sync.RWMutex
+
+	blueFsExtents           []Extents
+	blueFsExtentsReclaiming []Extents
 
 	blockSize      uint64
 	blockMask      uint64
