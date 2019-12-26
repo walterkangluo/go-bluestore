@@ -2,6 +2,7 @@ package bluestore
 
 import (
 	"github.com/go-bluestore/bluestore/allocator"
+	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/thread_pool"
@@ -161,6 +162,10 @@ func (sb *SharedBlob) isLoaded() bool {
 type AioContext struct {
 }
 
+func (ac *AioContext) aioFinish(bs *BlueStore) {
+
+}
+
 type TransContext struct {
 	AioContext
 }
@@ -183,7 +188,7 @@ type BlueStore struct {
 	nextDumpOnBlueFsBalanceFailure time.Time
 
 	db           *types.KeyValueDB
-	bdev         *types.BlockDevice
+	bdev         *blockdevice.BlockDevice
 	freeListType string
 	// FreeListManage
 	alloc   *allocator.Allocator

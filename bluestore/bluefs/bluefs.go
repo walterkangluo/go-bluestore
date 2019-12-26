@@ -2,10 +2,10 @@ package bluefs
 
 import (
 	al "github.com/go-bluestore/bluestore/allocator"
+	"github.com/go-bluestore/bluestore/blockdevice"
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	types2 "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
-	ctypes "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 	"sync"
@@ -19,7 +19,12 @@ func (bf *BlueFS) SetSlowDeviceExpander(bfe *BlueFSDeviceExpander) {
 func (bf *BlueFS) AddBlockDevice(id int, devPath string) error {
 	log.Debug("bdev id %d and path %s.", id, devPath)
 
-	types.CreateBlockDevice(bf.Cct, devPath)
+	utils.AssertTrue(id < bf.bdev.Size())
+	utils.AssertTrue(nil == bf.bdev.At(id))
+
+	//b := blockdevice.CreateBlockDevice()
+
+	//blockdevice.CreateBlockDevice(bf.Cct, devPath)
 	return nil
 }
 
@@ -27,7 +32,7 @@ func (bf *BlueFS) BdevSupportLabel(id int) bool {
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil != bf.bdev.At(int(id)))
 
-	return bf.bdev.At(id).(*types.BlockDevice).SupportedBdevLable()
+	return bf.bdev.At(id).(*blockdevice.BlockDevice).SupportedBdevLable()
 }
 
 func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
@@ -35,11 +40,10 @@ func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
 
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil != bf.bdev.At(id))
-	utils.AssertTrue(bf.bdev.At(id).(*types.BlockDevice).GetSize() >= offset + length)
+	utils.AssertTrue(bf.bdev.At(id).(*blockdevice.BlockDevice).GetSize() >= offset+length)
 
 	bf.blockAll[id].insert(offset, length)
 	bf.blockTotal[id] += length
-
 
 }
 
@@ -48,7 +52,7 @@ func (bf *BlueFS) GetBlockDeviceSize(deviceId int) uint64 {
 	utils.AssertTrue(nil != bf.bdev.At(int(deviceId)))
 
 	if deviceId < bf.bdev.Size() && nil != bf.bdev.At(int(deviceId)) {
-		return bf.bdev.At(deviceId).(*types.BlockDevice).GetBlockSize()
+		return bf.bdev.At(deviceId).(*blockdevice.BlockDevice).GetBlockSize()
 	}
 
 	return 0
@@ -78,14 +82,14 @@ func initAlloc(bfs *BlueFS) {
 		if nil == bfs.bdev.At(id) {
 			continue
 		}
-		utils.AssertTrue(bfs.bdev.At(id).(*types.BlockDevice).GetSize() > 0)
+		utils.AssertTrue(bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize() > 0)
 		utils.AssertTrue(bfs.allocSize.At(id).(uint64) > 0)
 
 		log.Debug("bdev name %s, allocSize %d, size %d.",
-			blueFsFile[id], bfs.allocSize.At(id).(uint64), bfs.bdev.At(id).(*types.BlockDevice).GetSize())
+			blueFsFile[id], bfs.allocSize.At(id).(uint64), bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize())
 
 		allocator := al.CreateAllocator(bfs.Cct, bfs.Cct.Conf.BlueFsAllocator,
-			int64(bfs.bdev.At(id).(*types.BlockDevice).GetSize()), bfs.allocSize.At(id).(int64), blueFsFile[id])
+			int64(bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize()), bfs.allocSize.At(id).(int64), blueFsFile[id])
 		bfs.alloc.SetAt(id, allocator)
 		blockAll := bfs.blockAll[id]
 
@@ -160,17 +164,17 @@ func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64)
 }
 
 func (bfs *BlueFS) writeSuper() {
-	var bl = ctypes.CreateBufferList()
+	var bl = types.CreateBufferList()
 	//var crc = bl.CRC32(-1)
 
 	utils.AssertTrue(bl.Length() <= getSuperLength())
 	bl.AppendZero(getSuperLength() - bl.Length())
-	bfs.bdev.At(BdevDb).(*types.BlockDevice).Write(getSuperLength(), *bl, false)
+	bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).Write(getSuperLength(), *bl, false)
 }
 
 func (bfs *BlueFS) flushBdev() {
 	for i := 0; i < bfs.bdev.Size(); i++ {
-		bfs.bdev.At(i).(*types.BlockDevice).Flush()
+		bfs.bdev.At(i).(*blockdevice.BlockDevice).Flush()
 	}
 }
 
@@ -183,7 +187,7 @@ func (bfs *BlueFS) closeWriter() {
 			utils.AssertTrue(nil != h.iocv[i])
 
 			h.iocv[i].AioWait()
-			bfs.bdev.At(i).(*types.BlockDevice).QueueReapIoc()
+			bfs.bdev.At(i).(*blockdevice.BlockDevice).QueueReapIoc()
 		}
 	}
 }
@@ -211,7 +215,7 @@ func (bfs *BlueFS) mkfs(osdUuid types.UUID) {
 
 	super := btypes.BlueFsSuperT{
 		Version:   uint64(1),
-		BlockSize: uint32(bfs.bdev.At(BdevDb).(*types.BlockDevice).GetBlockSize()),
+		BlockSize: uint32(bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).GetBlockSize()),
 		OsdUuid:   osdUuid,
 		Uuid:      types.GenerateRandomUuid(),
 	}

@@ -2,6 +2,7 @@ package bluestore
 
 import (
 	"fmt"
+	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
@@ -76,7 +77,8 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 	}
 
 	var crc, expectedCrc uint32
-	p := bl.Front()
+	// TODO: buffer list implement
+	p := bl
 	defer func() {
 		if err := recover(); err != nil {
 			log.Debug("unable to decode label at offset")
@@ -463,13 +465,19 @@ func (bs *BlueStore) setCacheSize() error {
 	return nil
 }
 
+func aioCb(priv unsafe.Pointer, priv2 unsafe.Pointer) {
+	store := (*BlueStore)(priv)
+	c := (*AioContext)(priv2)
+	c.aioFinish(store)
+}
+
 func (bs *BlueStore) openBdev(create bool) error {
 	var r error
 	utils.AssertTrue(nil == bs.bdev)
 
 	p := bs.Path + "/block"
 	// TODO: implement create BlocDevice
-	bs.bdev = types.CreateBlockDevice(bs.Cct, p)
+	bs.bdev = blockdevice.CreateBlockDevice(bs.Cct, p, aioCb, unsafe.Pointer(bs))
 
 	r = bs.bdev.Open(p)
 	if nil != r {

@@ -43,6 +43,8 @@ type MdConfigT struct {
 	BlueStoreMinAllocSizeSSd uint64
 
 	BlueStoreKVBackend string
+
+	BdevAioMaxQueueDepth int
 }
 
 func (md *MdConfigT) GetVal(key interface{}) interface{} {

@@ -39,3 +39,18 @@ func (aio *AIOT) PRead(_offset uint64, _length uint64) {
 func (aio *AIOT) GetReturnValue() int64 {
 	return aio.rval
 }
+
+// TODO: replace by io_context_t
+type ioContextT int
+type AioQueueT struct {
+	maxIODepth int
+	ctx        ioContextT
+	aioIter    AIOT
+}
+
+func Create(maxIoDepth int) AioQueueT {
+	return AioQueueT{
+		maxIODepth: maxIoDepth,
+		ctx:        0,
+	}
+}

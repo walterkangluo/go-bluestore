@@ -1,18 +1,20 @@
-package types
+package blockdevice
 
 import (
-	"github.com/go-bluestore/common/types"
+	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/aio"
 	"sync"
 	"unsafe"
 )
+
+type AioCallbackT func(handler unsafe.Pointer, aio unsafe.Pointer)
 
 type IOContext struct {
 	lock          sync.Mutex
 	conditionCond sync.Cond
 	r             int
 
-	Cct           *CephContext
+	Cct           *types.CephContext
 	Priv          unsafe.Pointer
 	NvmeTaskFirst unsafe.Pointer
 	NvmeTaskLast  unsafe.Pointer
@@ -24,7 +26,7 @@ type IOContext struct {
 	AllowEio    bool
 }
 
-func CreateIOContext(cct *CephContext, p unsafe.Pointer, _allowAio bool) *IOContext {
+func CreateIOContext(cct *types.CephContext, p unsafe.Pointer, _allowAio bool) *IOContext {
 	return &IOContext{
 		Cct:      cct,
 		Priv:     p,
@@ -48,15 +50,24 @@ func (io *IOContext) AioWait() {
 }
 
 type BlockDevice struct {
-	cct  *CephContext
-	path string
+	// public
+	Cct *types.CephContext
+
+	Path string
+
+	// private
+	iocReapLock  sync.Mutex
+	iocReapQueue []*IOContext
+	iocReapCount int
+	rotational   bool
 }
 
-func CreateBlockDevice(cct *CephContext, path string) *BlockDevice {
-	return &BlockDevice{
-		cct:  cct,
-		path: path,
-	}
+func (bd *BlockDevice) IsRotational() bool {
+	return bd.rotational
+}
+
+func (bd *BlockDevice) New(cct *types.CephContext) {
+	bd.Cct = cct
 }
 
 func (*BlockDevice) Open(path string) error {
@@ -84,9 +95,5 @@ func (bd *BlockDevice) QueueReapIoc() {
 }
 
 func (bd *BlockDevice) SupportedBdevLable() bool {
-	return true
-}
-
-func (bd *BlockDevice) IsRotational() bool {
 	return true
 }

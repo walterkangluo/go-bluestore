@@ -1,6 +1,7 @@
 package bluefs
 
 import (
+	"github.com/go-bluestore/bluestore/blockdevice"
 	btypes "github.com/go-bluestore/bluestore/bluefs/types"
 	"github.com/go-bluestore/bluestore/types"
 	ctypes "github.com/go-bluestore/common/types"
@@ -51,14 +52,14 @@ type FileWriter struct {
 	// bufferAppender bufferlist
 	writerType int
 	lock       sync.Mutex
-	iocv       [MaxBdev]*types.IOContext
+	iocv       [MaxBdev]*blockdevice.IOContext
 }
 
 type FileReaderBuffer struct {
 	blOff       uint64
 	pos         uint64
 	maxPrefetch uint64
-	bl          ctypes.BufferList
+	bl          types.BufferList
 }
 
 func CreateFileReaderBuffer(mp uint64) *FileReaderBuffer {
@@ -133,13 +134,13 @@ func (bi blockInfo) GetLen() uint64 {
 
 type blockInfoList struct {
 	segment []blockInfo
-	size uint32
+	size    uint32
 }
 
 func (bl *blockInfoList) insert(offset uint64, length uint64) {
 	b := blockInfo{
 		start: offset,
-		len: length,
+		len:   length,
 	}
 	bl.segment = append(bl.segment, b)
 	bl.size++
@@ -175,13 +176,13 @@ type BlueFS struct {
 	*	BDEV_WAL   db.wal/
 	*	BDEV_SLOW  db.slow/
 	 */
-	bdev           *ctypes.Vector   // *types.BlockDevice
-	ioc            *ctypes.Vector   // types.IOContext
-	blockAll       []blockInfoList  // []blockInfoList
-	blockTotal     []uint64         // []uint64
-	alloc          *ctypes.Vector   // []allocator.Allocator
-	allocSize      *ctypes.Vector   // []uint64
-	pendingRelease *ctypes.Vector   // []uint64
+	bdev           *ctypes.Vector  // *types.BlockDevice
+	ioc            *ctypes.Vector  // types.IOContext
+	blockAll       []blockInfoList // []blockInfoList
+	blockTotal     []uint64        // []uint64
+	alloc          *ctypes.Vector  // []allocator.Allocator
+	allocSize      *ctypes.Vector  // []uint64
+	pendingRelease *ctypes.Vector  // []uint64
 
 	slowDevExpander *BlueFSDeviceExpander
 }

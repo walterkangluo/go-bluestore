@@ -14,6 +14,10 @@ const (
 	LoopQueueType
 )
 
+var (
+	SPDKPrefix = "spdk:"
+)
+
 // Options contains all options which will be applied when instantiating a ants pool.
 type PoolFlags struct {
 	// ExpiryDuration set the expired time of every worker.

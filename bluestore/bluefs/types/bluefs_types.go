@@ -104,7 +104,7 @@ func (bs *BlueFsSuperT) blockMask() uint64 {
 type BlueFsTransactionT struct {
 	Uuid types.UUID
 	Seq  uint64
-	opBl ctypes.BufferList
+	opBl types.BufferList
 }
 
 func (bt *BlueFsTransactionT) Empty() bool {
