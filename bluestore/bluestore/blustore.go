@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
-	benv "github.com/go-bluestore/bluestore/bluestore/bluerocks_env"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
@@ -675,7 +674,7 @@ func (bs *BlueStore) openDB(create bool) error {
 
 		if bs.Cct.Conf.BlueStoreBlueFsEnvMirror {
 			// TODO: implement rockdB env
-			a := benv.CreateBlueRocksEnv(bs.blueFs)
+			//a := benv.CreateBlueRocksEnv(bs.blueFs)
 
 			goto freeBlueFs
 		}
