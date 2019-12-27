@@ -5,13 +5,16 @@ import (
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
+	"github.com/go-bluestore/bluestore/kv/rocksdb_store"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
 	ctypes "github.com/go-bluestore/common/types"
+	lrdb "github.com/go-bluestore/lib/rockdb"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 	"math"
 	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 	"time"
@@ -518,6 +521,7 @@ func (bs *BlueStore) openDB(create bool) error {
 	utils.AssertTrue(bs.db == nil)
 
 	var r error
+	var fn string
 
 	// 1. get kv_backend type
 	var kvBackend string
@@ -672,13 +676,34 @@ func (bs *BlueStore) openDB(create bool) error {
 			goto freeBlueFs
 		}
 
+		var env *lrdb.Env
 		if bs.Cct.Conf.BlueStoreBlueFsEnvMirror {
-			// TODO: implement rockdB env
-			//a := benv.CreateBlueRocksEnv(bs.blueFs)
-
-			goto freeBlueFs
+			a := rocksdb_store.NewBlueRocksEnv(bs.blueFs)
+			b := lrdb.NewDefaultEnv()
+			if create {
+				cmd := "rm -rf " + bs.Path + "/db " + bs.Path + "/db.slow" + bs.Path + "/db.wal"
+				res := exec.Command("sh", "-c", cmd)
+				_, r := res.Output()
+				utils.AssertTrue(r == nil)
+			}
+			env = rocksdb_store.NewEnvMirror(b, a.Wrapper, false, true)
+		} else {
+			env = rocksdb_store.NewBlueRocksEnv(bs.blueFs).Wrapper
+			fn = "db"
 		}
 
+		if bs.blueFsSharedBdev == bluefs.BdevSlow {
+			// use block.db and block both to bluefs
+			dbSize := bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb)
+			slowSize := bs.blueFs.GetBlockDeviceSize(bluefs.BdevSlow)
+			dbPath := fmt.Sprintf("%s,%d %s.slow,%d", fn, uint64(float32(dbSize)*0.95), fn, uint64(float32(slowSize)*0.95))
+			bs.Cct.Conf.RockDBPaths = dbPath
+			log.Debug("set rockdb_db_path to %s.", dbPath)
+		}
+
+		if create {
+			log.Debug("%v", env)
+		}
 	}
 
 freeBlueFs:
