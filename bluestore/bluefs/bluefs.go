@@ -200,7 +200,8 @@ func (bfs *BlueFS) flushAndSyncLog(l *sync.Mutex, wantSeq uint64, jumpTo uint64)
 }
 
 func (bfs *BlueFS) writeSuper() {
-	var bl = types.CreateBufferList()
+	var bl types.BufferList
+	bl.Init()
 	//var crc = bl.CRC32(-1)
 
 	utils.AssertTrue(bl.Length() <= getSuperLength())

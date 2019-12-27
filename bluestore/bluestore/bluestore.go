@@ -83,8 +83,7 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 	}
 
 	var crc, expectedCrc uint32
-	// TODO: buffer list implement
-	p := bl
+	p := bl.Begin()
 	defer func() {
 		if err := recover(); err != nil {
 			log.Debug("unable to decode label at offset")
@@ -93,9 +92,7 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 	}()
 	bl.Decode(*(*[]byte)(unsafe.Pointer(label)), p)
 	var t types.BufferList
-	/*TODO:暂时未想好实现，主要关于迭代器的问题,此处需要begin函数返回的对象为迭代器，现有实现中
-	返回的是vector中的第一个元素，无法实现p.get_off()方法，待后续看这里的迭代器能否用其他用法代替*/
-	//t.SubstrOf(bl, 0, p.get_off())
+	t.SubstrOf(&bl, 0, p.GetOff())
 	crc = t.CRC32(-1)
 	bl.Decode(*(*[]byte)(unsafe.Pointer(&expectedCrc)), p)
 
