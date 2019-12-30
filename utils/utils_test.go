@@ -122,4 +122,5 @@ func TestTrimLastSpace(t *testing.T) {
 
 	ss := TrimLastSpace(bb)
 	assert.Equal("\t \n s \n fs\td", ss)
+
 }

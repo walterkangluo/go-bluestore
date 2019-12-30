@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/go-bluestore/bluestore/types"
 	ctypes "github.com/go-bluestore/common/types"
+	"github.com/go-bluestore/utils"
 )
 
 type BlueFsExtentT struct {
@@ -101,6 +102,23 @@ func (bs *BlueFsSuperT) blockMask() uint64 {
 	return ^(uint64(bs.BlockSize) - uint64(1))
 }
 
+type opT uint
+
+const (
+	_ opT = iota
+	opInit
+	opAllocAdd
+	opAllocRm
+	opDirLink
+	opDirUnlink
+	opDirCreate
+	opDirRemove
+	opFileUpdate
+	opFileRemove
+	opJump
+	opJumpSeq
+)
+
 type BlueFsTransactionT struct {
 	Uuid types.UUID
 	Seq  uint64
@@ -115,4 +133,9 @@ func (bt *BlueFsTransactionT) OpInit() {
 }
 
 func (bt *BlueFsTransactionT) OpAllocAdd(id uint, start uint64, len uint64) {
+}
+
+func (bt *BlueFsTransactionT) OpDirCreate(dir string) {
+	bt.opBl.Encode(utils.NumToBytes(opDirCreate))
+	bt.opBl.Encode([]byte(dir))
 }

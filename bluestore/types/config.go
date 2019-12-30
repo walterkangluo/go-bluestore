@@ -53,7 +53,10 @@ type MdConfigT struct {
 
 	BdevAioMaxQueueDepth int
 	Perf                 bool
+
 	RockDBSeperateWalDir bool
+	RockDBEnableRmRange  bool
+	RockDBPaths          string
 }
 
 func (md *MdConfigT) GetVal(key interface{}) interface{} {

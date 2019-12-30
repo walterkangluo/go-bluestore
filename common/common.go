@@ -53,7 +53,7 @@ func SafeRead(f *os.File, buf *string, count int64) (int64, error) {
 			if err == syscall.EINTR {
 				continue
 			}
-			return -1, err
+			return 0, err
 		}
 		cnt += int64(r)
 		*buf += string(data)

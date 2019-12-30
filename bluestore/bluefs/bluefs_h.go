@@ -46,7 +46,14 @@ type Dir struct {
 	fileMap map[string]fileRef
 }
 
-type dirRef []Dir
+func (d *Dir) New() {
+	d.RefCountedObject.New(nil, 0)
+}
+
+type dirRef struct {
+	*Dir
+}
+
 type FileWriter struct {
 	file fileRef
 	pos  uint64
