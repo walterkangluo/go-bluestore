@@ -24,12 +24,12 @@ func (bf *BlueFS) AddBlockDevice(id int, path string) error {
 
 	b := blockdevice.CreateBlockDevice(bf.Cct, path, nil, nil)
 
-	r := b.Open(path)
+	r := b.BlockDeviceFunc.Open(path)
 	if nil != r {
 		return r
 	}
 
-	log.Debug("bdev:%d, path:%s, size:%d.", id, path, b.GetSize())
+	log.Debug("bdev:%d, path:%s, size:%d.", id, path, b.BlockDeviceFunc.GetSize())
 
 	bf.bdev.SetAt(id, b)
 	bf.ioc.SetAt(id, blockdevice.CreateIOContext(bf.Cct, nil, false))
@@ -40,7 +40,7 @@ func (bf *BlueFS) BdevSupportLabel(id int) bool {
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil != bf.bdev.At(int(id)))
 
-	return bf.bdev.At(id).(*blockdevice.BlockDevice).SupportedBdevLable()
+	return bf.bdev.At(id).(*blockdevice.BlockDevice).BlockDeviceFunc.SupportedBdevLable()
 }
 
 func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
@@ -48,7 +48,7 @@ func (bf *BlueFS) AddBlockExtent(id int, offset uint64, length uint64) {
 
 	utils.AssertTrue(id < bf.bdev.Size())
 	utils.AssertTrue(nil != bf.bdev.At(id))
-	utils.AssertTrue(bf.bdev.At(id).(*blockdevice.BlockDevice).GetSize() >= offset+length)
+	utils.AssertTrue(bf.bdev.At(id).(*blockdevice.BlockDevice).BlockDeviceFunc.GetSize() >= offset+length)
 
 	bf.blockAll[id].insert(offset, length)
 	bf.blockTotal[id] += length
@@ -73,7 +73,7 @@ func (bf *BlueFS) GetBlockDeviceSize(deviceId int) uint64 {
 	utils.AssertTrue(nil != bf.bdev.At(int(deviceId)))
 
 	if deviceId < bf.bdev.Size() && nil != bf.bdev.At(int(deviceId)) {
-		return bf.bdev.At(deviceId).(*blockdevice.BlockDevice).GetBlockSize()
+		return bf.bdev.At(deviceId).(*blockdevice.BlockDevice).BlockDeviceFunc.GetBlockSize()
 	}
 
 	return 0
@@ -103,14 +103,14 @@ func initAlloc(bfs *BlueFS) {
 		if nil == bfs.bdev.At(id) {
 			continue
 		}
-		utils.AssertTrue(bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize() > 0)
+		utils.AssertTrue(bfs.bdev.At(id).(*blockdevice.BlockDevice).BlockDeviceFunc.GetSize() > 0)
 		utils.AssertTrue(bfs.allocSize.At(id).(uint64) > 0)
 
 		log.Debug("bdev name %s, allocSize %d, size %d.",
-			blueFsFile[id], bfs.allocSize.At(id).(uint64), bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize())
+			blueFsFile[id], bfs.allocSize.At(id).(uint64), bfs.bdev.At(id).(*blockdevice.BlockDevice).BlockDeviceFunc.GetSize())
 
 		allocator := al.CreateAllocator(bfs.Cct, bfs.Cct.Conf.BlueFsAllocator,
-			int64(bfs.bdev.At(id).(*blockdevice.BlockDevice).GetSize()), bfs.allocSize.At(id).(int64), blueFsFile[id])
+			int64(bfs.bdev.At(id).(*blockdevice.BlockDevice).BlockDeviceFunc.GetSize()), bfs.allocSize.At(id).(int64), blueFsFile[id])
 		bfs.alloc.SetAt(id, allocator)
 		blockAll := bfs.blockAll[id]
 
@@ -206,12 +206,12 @@ func (bfs *BlueFS) writeSuper() {
 
 	utils.AssertTrue(bl.Length() <= getSuperLength())
 	bl.AppendZero(getSuperLength() - bl.Length())
-	bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).Write(getSuperLength(), bl, false)
+	bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).BlockDeviceFunc.Write(getSuperLength(), &bl, false)
 }
 
 func (bfs *BlueFS) flushBdev() {
 	for i := 0; i < bfs.bdev.Size(); i++ {
-		bfs.bdev.At(i).(*blockdevice.BlockDevice).Flush()
+		bfs.bdev.At(i).(*blockdevice.BlockDevice).BlockDeviceFunc.Flush()
 	}
 }
 
@@ -252,7 +252,7 @@ func (bfs *BlueFS) Mkfs(osdUuid types.UUID) {
 
 	super := btypes.BlueFsSuperT{
 		Version:   uint64(1),
-		BlockSize: uint32(bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).GetBlockSize()),
+		BlockSize: uint32(bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).BlockDeviceFunc.GetBlockSize()),
 		OsdUuid:   osdUuid,
 		Uuid:      types.GenerateRandomUuid(),
 	}

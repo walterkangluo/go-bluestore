@@ -7,6 +7,8 @@ import (
 	"unsafe"
 )
 
+const RW_IO_MAX  = 0x7FFFF000
+
 type AIOCompletionThread struct {
 	bdev *BlockDevice
 }
@@ -38,4 +40,8 @@ type KernelDevice struct {
 	aioStop         bool
 	injectingCrash  int
 	aioThread       AIOCompletionThread
+}
+
+func (kr *KernelDevice) Read() {
+	//kr.BlockDevice.
 }

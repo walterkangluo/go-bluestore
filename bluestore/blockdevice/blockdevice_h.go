@@ -2,8 +2,11 @@ package blockdevice
 
 import (
 	"github.com/go-bluestore/bluestore/types"
+	types2 "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/lib/aio"
+	"github.com/go-bluestore/utils"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -11,7 +14,7 @@ type AioCallbackT func(handler unsafe.Pointer, aio unsafe.Pointer)
 
 type IOContext struct {
 	lock          sync.Mutex
-	conditionCond sync.Cond
+	conditionCond *sync.Cond
 	r             int
 
 	Cct           *types.CephContext
@@ -49,6 +52,17 @@ func (io *IOContext) GetReturnValue(_r int) int {
 func (io *IOContext) AioWait() {
 }
 
+func (io *IOContext) TryAioAwake() {
+	io.conditionCond = sync.NewCond(&io.lock)
+	if io.NumRunning == 1 {
+		io.conditionCond.Broadcast()
+		io.NumRunning--
+		utils.AssertTrue(io.NumRunning >= 0)
+	} else {
+		io.NumRunning--
+	}
+}
+
 type BlockDevice struct {
 	// public
 	Cct *types.CephContext
@@ -58,42 +72,32 @@ type BlockDevice struct {
 	// private
 	iocReapLock  sync.Mutex
 	iocReapQueue []*IOContext
-	iocReapCount int
+	iocReapCount atomic.Value //should use atomit Int32
 	rotational   bool
-}
 
-func (bd *BlockDevice) IsRotational() bool {
-	return bd.rotational
+	// virtual function
+	BlockDeviceFunc interface {
+		SupportedBdevLable() bool
+		IsRotational() bool
+		AioSubmit(ioc *IOContext)
+		GetSize() uint64
+		GetBlockSize() uint64
+		CollectMetadata(prefix string, pm *map[string]string) error
+		Read(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext, buffered bool) error
+		ReadRandom(off uint64, len uint64, buf string, buffered bool) error
+		Write(off uint64, bl *types.BufferList, buffered bool) error
+		AioRead(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext) error
+		AioWrite(off uint64, bl *types2.List, ioc *IOContext, buffered bool) bool
+		Flush() error
+		InvalidateCache(off uint64, len uint64) error
+		Open(path string) error
+		Close()
+    }
 }
 
 func (bd *BlockDevice) New(cct *types.CephContext) {
 	bd.Cct = cct
 }
 
-func (*BlockDevice) Open(path string) error {
-	return nil
-}
-
-func (bd *BlockDevice) GetSize() uint64 {
-	return uint64(1)
-}
-
-func (bd *BlockDevice) GetBlockSize() uint64 {
-	return uint64(1)
-}
-
-func (bd *BlockDevice) Write(off uint64, bl types.BufferList, buffered bool) {
-}
-
-func (bd *BlockDevice) Flush() {
-}
-
-func (bd *BlockDevice) Close() {
-}
-
 func (bd *BlockDevice) QueueReapIoc() {
-}
-
-func (bd *BlockDevice) SupportedBdevLable() bool {
-	return true
 }

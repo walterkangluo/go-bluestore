@@ -443,7 +443,7 @@ func (bs *BlueStore) setCacheSize() error {
 	if bs.Cct.Conf.BlueStoreCacheSize > 0 {
 		bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSize
 	} else {
-		if bs.bdev.SupportedBdevLable() {
+		if bs.bdev.BlockDeviceFunc.SupportedBdevLable() {
 			bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSizeHdd
 		} else {
 			bs.cacheSize = bs.Cct.Conf.BlueStoreCacheSizeSSd
@@ -492,20 +492,20 @@ func (bs *BlueStore) openBdev(create bool) error {
 	// TODO: implement create BlocDevice
 	bs.bdev = blockdevice.CreateBlockDevice(bs.Cct, p, aioCb, unsafe.Pointer(bs))
 
-	r = bs.bdev.Open(p)
-	if nil != r {
+	r = bs.bdev.BlockDeviceFunc.Open(p)
+	if r != nil {
 		log.Error("open path %s failed with %v.", p, r)
 		goto fail
 	}
 
-	if bs.bdev.SupportedBdevLable() {
-		r = bs.checkOrSetBdevLabel(p, bs.bdev.GetSize(), "main", create)
+	if bs.bdev.BlockDeviceFunc.SupportedBdevLable() {
+		r = bs.checkOrSetBdevLabel(p, bs.bdev.BlockDeviceFunc.GetSize(), "main", create)
 		if nil != r {
 			goto failclose
 		}
 	}
 
-	bs.blockSize = bs.bdev.GetBlockSize()
+	bs.blockSize = bs.bdev.BlockDeviceFunc.GetBlockSize()
 	bs.blockMask = ^(bs.blockSize - 1)
 	bs.blockSizeOrder = utils.Ctx(bs.blockMask)
 	utils.AssertTrue(bs.blockSize == 1<<bs.blockSizeOrder)
@@ -518,7 +518,7 @@ func (bs *BlueStore) openBdev(create bool) error {
 	return nil
 
 failclose:
-	bs.bdev.Close()
+	bs.bdev.BlockDeviceFunc.Close()
 fail:
 	bs.bdev = nil
 	return r
@@ -627,7 +627,7 @@ func (bs *BlueStore) openDB(create bool) error {
 			goto freeBlueFs
 		}
 		if create {
-			initial := (float64(bs.bdev.GetSize())) * (bs.Cct.Conf.BlueStoreBlueFsMinRation + bs.Cct.Conf.BlueStoreBlueFsGiftRation)
+			initial := (float64(bs.bdev.BlockDeviceFunc.GetSize())) * (bs.Cct.Conf.BlueStoreBlueFsMinRation + bs.Cct.Conf.BlueStoreBlueFsGiftRation)
 			initial = math.Max(initial, float64(bs.Cct.Conf.BlueStoreBlueFsMin))
 			if 0 != bs.Cct.Conf.BlueFsAllocSize%bs.minAllocSize {
 				r = syscall.EINVAL
@@ -636,7 +636,7 @@ func (bs *BlueStore) openDB(create bool) error {
 			}
 
 			initial = float64(utils.P2RoundUp(uint64(initial), bs.Cct.Conf.BlueFsAllocSize))
-			start := utils.P2Align((bs.bdev.GetSize()-uint64(initial))/2, bs.Cct.Conf.BlueFsAllocSize)
+			start := utils.P2Align((bs.bdev.BlockDeviceFunc.GetSize()-uint64(initial))/2, bs.Cct.Conf.BlueFsAllocSize)
 			bs.blueFs.AddBlockExtent(bs.blueFsSharedBdev, start, uint64(initial))
 			bs.blueFsExtents = append(bs.blueFsExtents, Extents{start: start, length: uint64(initial)})
 		}
@@ -897,7 +897,7 @@ func (bs *BlueStore) Mkfs() error {
 		bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSize
 	} else {
 		utils.AssertTrue(nil != bs.bdev)
-		if bs.bdev.IsRotational() {
+		if bs.bdev.BlockDeviceFunc.IsRotational() {
 			bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSizeHdd
 		} else {
 			bs.minAllocSize = bs.Cct.Conf.BlueStoreMinAllocSizeSSd
