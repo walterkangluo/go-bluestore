@@ -92,7 +92,7 @@ type BlockDevice struct {
 		InvalidateCache(off uint64, len uint64) error
 		Open(path string) error
 		Close()
-    }
+	}
 }
 
 func (bd *BlockDevice) New(cct *types.CephContext) {

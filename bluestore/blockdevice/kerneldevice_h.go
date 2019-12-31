@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-const RW_IO_MAX  = 0x7FFFF000
+const RW_IO_MAX = 0x7FFFF000
 
 type AIOCompletionThread struct {
 	bdev *BlockDevice
