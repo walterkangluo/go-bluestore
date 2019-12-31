@@ -8,14 +8,13 @@ import (
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/rockdb"
 	"sync"
-	"unsafe"
 )
 
 type RocksDBStore struct {
 	cct    *types.CephContext
 	logger *types.PerfCounters
 	path   string
-	priv   unsafe.Pointer
+	priv   interface{}
 
 	DB  *gorocksdb.DB
 	Env *gorocksdb.Env
@@ -47,7 +46,7 @@ func (ct *CompactThread) Init(db *RocksDBStore) {
 	ct.db = db
 }
 
-func (rs *RocksDBStore) New(c *types.CephContext, path string, p unsafe.Pointer) {
+func CreateRocksDBStore(c *types.CephContext, path string, p interface{}) (rs *RocksDBStore) {
 	rs.cct = c
 	rs.logger = nil
 	rs.path = path
@@ -62,6 +61,25 @@ func (rs *RocksDBStore) New(c *types.CephContext, path string, p unsafe.Pointer)
 	rs.compactThread.Init(rs)
 	rs.CompactOnMount = false
 	rs.DisableWal = false
-	rs.EnableRmRange = c.Conf.RockDBEnableRmRange
+	rs.EnableRmRange = c.Conf.RocksDBEnableRmRange
 	rs.HighPriWatermark = 0
+	return
+}
+
+func (rs *RocksDBStore) SetMergeOperator(string) {
+}
+
+func (rs *RocksDBStore) SetCacheSize(uint64) {
+}
+
+func (rs *RocksDBStore) Init(string) error {
+	return nil
+}
+
+func (rs *RocksDBStore) CreateAndOpen(str string) error {
+	return nil
+}
+
+func (rs *RocksDBStore) Open(str string) error {
+	return rs.doOpen(str, false)
 }

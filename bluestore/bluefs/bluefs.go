@@ -206,7 +206,7 @@ func (bfs *BlueFS) writeSuper() {
 
 	utils.AssertTrue(bl.Length() <= getSuperLength())
 	bl.AppendZero(getSuperLength() - bl.Length())
-	bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).Write(getSuperLength(), *bl, false)
+	bfs.bdev.At(BdevDb).(*blockdevice.BlockDevice).Write(getSuperLength(), bl, false)
 }
 
 func (bfs *BlueFS) flushBdev() {
@@ -300,6 +300,9 @@ func (bfs *BlueFS) Mkfs(osdUuid types.UUID) {
 
 func (bfs *BlueFS) Mount() error {
 	return nil
+}
+
+func (bfs *BlueFS) Umount() {
 }
 
 func (bfs *BlueFS) MkDir(dirName string) error {

@@ -11,11 +11,12 @@ import (
 func NewBlueRocksEnv(fs *bluefs.BlueFS) *BlueRocksEnv {
 	return &BlueRocksEnv{
 		//Wrapper: nil,
-		fs:      fs,
+		fs: fs,
 	}
 }
 
-func NewEnvMirror(a *lrdb.Env, b *lrdb.Env, freeA bool, freeB bool) *lrdb.Env {
+func NewEnvMirror(a *lrdb.Env, b *lrdb.Env, freeA bool, freeB bool) *BlueRocksEnv {
+
 	//return C.EnvMirror(b, a, freeA, freeB)
 	return nil
 }

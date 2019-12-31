@@ -5,6 +5,7 @@ import (
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
+	"github.com/go-bluestore/bluestore/kv/keyvalue_db"
 	"github.com/go-bluestore/bluestore/kv/rocksdb_store"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
@@ -22,6 +23,15 @@ import (
 )
 
 const (
+	PrefixSuper      = "S"
+	PrefixState      = "T"
+	PrefixColl       = "C"
+	PrefixObj        = "O"
+	PrefixOmap       = "M"
+	PrefixDeferred   = "L"
+	PrefixSAlloc     = "B"
+	PrefixSharedBlob = "X"
+
 	ObjectMaxSize      = 0xffffffff
 	SuperReserved      = 8192
 	BdevLabelBlockSize = 4096
@@ -519,6 +529,9 @@ func (bs *BlueStore) openDB(create bool) error {
 
 	var r error
 	var fn string
+	var res string
+	var options string
+	var env *rocksdb_store.BlueRocksEnv
 
 	// 1. get kv_backend type
 	var kvBackend string
@@ -650,12 +663,12 @@ func (bs *BlueStore) openDB(create bool) error {
 				bs.blueFs.AddBlockExtent(bs.blueFsSharedBdev, BdevLabelBlockSize, bs.blueFs.GetBlockDeviceSize(bluefs.BdevWal)-BdevLabelBlockSize)
 			}
 
-			bs.Cct.Conf.RockDBSeperateWalDir = true
+			bs.Cct.Conf.RocksDBSeperateWalDir = true
 			bs.blueFsSingleSharedDevice = false
 		} else {
 			r = syscall.Lstat(bfn, &st)
 			if r == nil {
-				bs.Cct.Conf.RockDBSeperateWalDir = false
+				bs.Cct.Conf.RocksDBSeperateWalDir = false
 			} else {
 				log.Error("%s symlink exists, but target unusable: %v.", bfn, r)
 				goto freeBlueFs
@@ -673,7 +686,7 @@ func (bs *BlueStore) openDB(create bool) error {
 			goto freeBlueFs
 		}
 
-		var env *lrdb.Env
+		//var env *lrdb.Env
 		if bs.Cct.Conf.BlueStoreBlueFsEnvMirror {
 			a := rocksdb_store.NewBlueRocksEnv(bs.blueFs)
 			b := lrdb.NewDefaultEnv()
@@ -685,7 +698,7 @@ func (bs *BlueStore) openDB(create bool) error {
 			}
 			env = rocksdb_store.NewEnvMirror(b, a.Wrapper, false, true)
 		} else {
-			env = rocksdb_store.NewBlueRocksEnv(bs.blueFs).Wrapper
+			env = rocksdb_store.NewBlueRocksEnv(bs.blueFs)
 			fn = "db"
 		}
 
@@ -694,14 +707,82 @@ func (bs *BlueStore) openDB(create bool) error {
 			dbSize := bs.blueFs.GetBlockDeviceSize(bluefs.BdevDb)
 			slowSize := bs.blueFs.GetBlockDeviceSize(bluefs.BdevSlow)
 			dbPath := fmt.Sprintf("%s,%d %s.slow,%d", fn, uint64(float32(dbSize)*0.95), fn, uint64(float32(slowSize)*0.95))
-			bs.Cct.Conf.RockDBPaths = dbPath
+			bs.Cct.Conf.RocksDBPaths = dbPath
 			log.Debug("set rockdb_db_path to %s.", dbPath)
 		}
 
 		if create {
-			log.Debug("%v", env)
+			log.Debug("%v and create dir %s.", env, fn)
+			//
+			r = env.CreateDir(fn)
+			utils.AssertTrue(r == nil)
+			if bs.Cct.Conf.RocksDBSeperateWalDir {
+				r = env.CreateDir(fn + ".wal")
+				utils.AssertTrue(r == nil)
+			}
+
+			if len(bs.Cct.Conf.RocksDBPaths) != 0 {
+				r = env.CreateDir(fn + ".slow")
+				utils.AssertTrue(r == nil)
+			}
+		}
+	} else {
+		// do not use bluefs
+		r = syscall.Mkdir(fn, 0755)
+		if r != nil && r != syscall.EEXIST {
+			log.Error("failed to create %s, with error %v.", fn, r)
+			return r
+		}
+
+		if bs.Cct.Conf.RocksDBSeperateWalDir {
+			walPath := bs.Path + "/db.wal"
+			r = syscall.Mkdir(walPath, 0755)
+			if r != nil && r != syscall.EEXIST {
+				log.Error("failed to create %s, with error %v.", fn, r)
+				return r
+			}
 		}
 	}
+
+	bs.db = keyvalue_db.CreateKeyValueDB(bs.Cct, kvBackend, fn, (unsafe.Pointer(env)))
+	if nil == bs.db {
+		log.Error("error create db")
+		if nil != bs.blueFs {
+			bs.blueFs.Umount()
+			bs.blueFs = nil
+			return syscall.EIO
+		}
+	}
+
+	bs.db.SetMergeOperator(PrefixState)
+	bs.db.SetCacheSize(uint64(bs.cacheKVRatio) * bs.cacheSize)
+
+	if kvBackend == "rocksdb" {
+		options = bs.Cct.Conf.BlueStoreRocksDBOptions
+	}
+
+	r = bs.db.Init(options)
+	utils.AssertTrue(r == nil)
+
+	if create {
+		r = bs.db.CreateAndOpen(res)
+	} else {
+		r = bs.db.Open(res)
+	}
+
+	if nil != r {
+		log.Error("error opening db")
+		if nil != bs.blueFs {
+			bs.blueFs.Umount()
+			bs.blueFs = nil
+			return syscall.EIO
+		}
+		bs.blueFs = nil
+		return syscall.EIO
+	}
+
+	log.Error("opened %s path %s options %s.", kvBackend, fn, options)
+	return nil
 
 freeBlueFs:
 	utils.AssertTrue(nil != bs.blueFs)
