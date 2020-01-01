@@ -11,10 +11,9 @@ import (
 	"syscall"
 )
 
-
 func parsePath(path string) []*lrdb.DBPath {
 	split := strings.Split(path, ",")
-	if len(split) % 2 != 0 {
+	if len(split)%2 != 0 {
 		log.Error("invalid path %s.", path)
 	}
 
@@ -56,7 +55,6 @@ func (mr *MergeOperatorRouter) Name() string {
 func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
 	return nil, false
 }
-
 
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 	var r error
@@ -147,7 +145,6 @@ func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 		log.Error("open db %s failed with err %v.", rs.path, err)
 		return syscall.EINVAL
 	}
-
 
 	return nil
 

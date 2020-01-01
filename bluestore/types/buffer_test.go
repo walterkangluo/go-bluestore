@@ -11,7 +11,7 @@ func TestBufferList_Add(t *testing.T) {
 	assert.Equal(t, uint64(0), bl.size)
 	data := []byte("abcdef")
 
-	bl.Add(data)
+	bl.Add(data, 1)
 
 	assert.Equal(t, uint64(1), bl.size)
 }

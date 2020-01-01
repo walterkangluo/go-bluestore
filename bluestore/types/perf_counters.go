@@ -6,22 +6,23 @@ import (
 
 type perfCounterTypeD uint8
 type uintT uint8
+
 var (
-	PerfCounterNone = perfCounterTypeD(0)
-	PerfCounterTime = perfCounterTypeD(0x1)
-	PerfCounterU64 = perfCounterTypeD(0x2)
+	PerfCounterNone        = perfCounterTypeD(0)
+	PerfCounterTime        = perfCounterTypeD(0x1)
+	PerfCounterU64         = perfCounterTypeD(0x2)
 	PerfCounterLongRunAvag = perfCounterTypeD(0x4)
-	PerfCounterCounter = perfCounterTypeD(0x8)
-	PerfCounterHistogram = perfCounterTypeD(0x10)
+	PerfCounterCounter     = perfCounterTypeD(0x8)
+	PerfCounterHistogram   = perfCounterTypeD(0x10)
 
 	Bytes = uintT(0)
-	None = uintT(1)
+	None  = uintT(1)
 
-	PrioCritical = 10
-	PrioInteresting = 8
-	PrioUseful = 5
+	PrioCritical      = 10
+	PrioInteresting   = 8
+	PrioUseful        = 5
 	PrioUninteresting = 2
-	PrioDebugOnly = 0
+	PrioDebugOnly     = 0
 
 	prioDefault = uint8(0)
 )
@@ -30,7 +31,9 @@ type perfCounterDataAnyD struct {
 	name        string
 	description string
 	nick        string
-	prio        uint
+	prio        uint8
+	_type       perfCounterTypeD
+	_uint       uintT
 }
 
 type perfCounterDataVecT []perfCounterDataAnyD
@@ -51,22 +54,21 @@ type PerfCounters struct {
 	mLock       Mutex
 	mData       perfCounterDataVecT
 	_type       perfCounterTypeD
-	_uint    uintT
+	_uint       uintT
 }
 
-func NewPerfCounters(cct *CephContext, name string, lowerBound int, upperBound int) *PerfCounters{
+func NewPerfCounters(cct *CephContext, name string, lowerBound int, upperBound int) *PerfCounters {
 	perf := &PerfCounters{
-		mCct: cct,
+		mCct:        cct,
 		mLowerBound: lowerBound,
 		mUpperBound: upperBound,
-		Name:name,
-		mLock: Mutex{},
-		mData: make([]perfCounterDataAnyD, upperBound - lowerBound - 1),
+		Name:        name,
+		mLock:       Mutex{},
+		mData:       make([]perfCounterDataAnyD, upperBound-lowerBound-1),
 	}
 	perf.mLock.New("PerfCounters::" + name)
 	return perf
 }
-
 
 type PerfCountersCollection struct {
 }
@@ -88,10 +90,10 @@ func (pc *PerfCounters) Inc(idx int, amt uint64) {
 
 type PerCountersBuilder struct {
 	mPerfCounters *PerfCounters
-	prioDefault int
+	prioDefault   int
 }
 
-func (p *PerCountersBuilder)New(cct *CephContext, name string, lowerBound int, upperBound int) {
+func (p *PerCountersBuilder) New(cct *CephContext, name string, lowerBound int, upperBound int) {
 	p.mPerfCounters = NewPerfCounters(cct, name, lowerBound, upperBound)
 }
 
@@ -99,23 +101,22 @@ func (p *PerCountersBuilder) addImpl(idx int, name string, desc string, nick str
 	utils.AssertTrue(idx > p.mPerfCounters.mLowerBound)
 	utils.AssertTrue(idx < p.mPerfCounters.mUpperBound)
 
-	var data PerfCounters
-
-	data.Name = name
-	data.Description = desc
+	data := p.mPerfCounters.mData[idx-p.mPerfCounters.mLowerBound-1]
+	data.name = name
+	data.description = desc
 	if len(nick) != 0 {
 		utils.AssertTrue(len(nick) < 4)
-		data.Nick = nick
+		data.nick = nick
 	}
 
-	data.Prio = prioDefault
+	data.prio = prioDefault
 	if prio != 0 {
-		data.Prio = uint8(prio)
+		data.prio = uint8(prio)
 	}
 
 	data._type = perfCounterTypeD(ty)
 	data._uint = uintT(u)
-
+	// data.histogram
 }
 
 func (p *PerCountersBuilder) AddU64Counter(idx int, name string, desc string, nick string, prio int, u int) {

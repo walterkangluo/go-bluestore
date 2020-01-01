@@ -54,22 +54,22 @@ type MdConfigT struct {
 	BdevAioMaxQueueDepth int
 	Perf                 bool
 
-	RocksDBSeperateWalDir bool
-	RocksDBEnableRmRange  bool
-	RocksDBPaths          string
-	RocksDBPerf           bool
-	RocksDBLogToCephLog   bool
-	RocksDBCacheRowRatio  float64
-	RocksDBCacheType      string
-	RocksDBBlockSize      int
+	RocksDBSeperateWalDir  bool
+	RocksDBEnableRmRange   bool
+	RocksDBPaths           string
+	RocksDBPerf            bool
+	RocksDBLogToCephLog    bool
+	RocksDBCacheRowRatio   float64
+	RocksDBCacheType       string
+	RocksDBBlockSize       int
 	RocksDBBloomBitsPerKey uint64
-	RocksDBIndexType    string
+	RocksDBIndexType       string
 
-	RocksDBCacheIndexAndFilterBlocks bool
+	RocksDBCacheIndexAndFilterBlocks                 bool
 	RocksDBCacheIndexAndFilterBlocksWithHighProority bool
-	RocksDBPartitionFilters bool
-	RockdSBMetadataBlockSize uint64
-	RocksDBPinL0FilterAndIndexBlocksInCache bool
+	RocksDBPartitionFilters                          bool
+	RockdSBMetadataBlockSize                         uint64
+	RocksDBPinL0FilterAndIndexBlocksInCache          bool
 
 	BlueStoreRocksDBOptions string
 }

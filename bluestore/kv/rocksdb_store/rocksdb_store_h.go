@@ -20,7 +20,6 @@ type RocksDBStore struct {
 	Env     *lrdb.Env
 	BbtOpts *lrdb.BlockBasedTableOptions
 
-
 	optionStr    string
 	cacheSize    uint64
 	setCacheFlag bool
