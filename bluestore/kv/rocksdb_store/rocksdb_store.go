@@ -58,7 +58,7 @@ func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][
 
 func (rs *RocksDBStore) compact() {
 	rs.logger.Inc(lRocksDBCompact, uint64(1))
-	rs.DB.CompactRange(lrdb.Range{Start:nil, Limit:nil})
+	rs.DB.CompactRange(lrdb.Range{Start: nil, Limit: nil})
 }
 
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
