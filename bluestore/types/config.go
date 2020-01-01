@@ -60,6 +60,16 @@ type MdConfigT struct {
 	RocksDBPerf           bool
 	RocksDBLogToCephLog   bool
 	RocksDBCacheRowRatio  float64
+	RocksDBCacheType      string
+	RocksDBBlockSize      int
+	RocksDBBloomBitsPerKey uint64
+	RocksDBIndexType    string
+
+	RocksDBCacheIndexAndFilterBlocks bool
+	RocksDBCacheIndexAndFilterBlocksWithHighProority bool
+	RocksDBPartitionFilters bool
+	RockdSBMetadataBlockSize uint64
+	RocksDBPinL0FilterAndIndexBlocksInCache bool
 
 	BlueStoreRocksDBOptions string
 }

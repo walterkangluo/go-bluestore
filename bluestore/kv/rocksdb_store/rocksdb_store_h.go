@@ -6,7 +6,7 @@ import "C"
 
 import (
 	"github.com/go-bluestore/bluestore/types"
-	"github.com/go-bluestore/lib/rockdb"
+	lrdb "github.com/go-bluestore/lib/gorocksdb"
 	"sync"
 )
 
@@ -16,11 +16,10 @@ type RocksDBStore struct {
 	path   string
 	priv   interface{}
 
-	DB  *gorocksdb.DB
-	Env *gorocksdb.Env
+	DB      *lrdb.DB
+	Env     *lrdb.Env
+	BbtOpts *lrdb.BlockBasedTableOptions
 
-	//dbStats gorocksdb.Statistics
-	//bbtOpts C.BlockBasedTableOptions
 
 	optionStr    string
 	cacheSize    uint64
@@ -54,7 +53,7 @@ func CreateRocksDBStore(c *types.CephContext, path string, p interface{}) (rs *R
 	rs.DB = nil
 	// TODO: to confirm p
 	//rs.Env = gorocksdb.NewNativeEnv(p)
-	rs.Env = gorocksdb.NewDefaultEnv()
+	rs.Env = lrdb.NewDefaultEnv()
 	//rs.dbStats = nil
 	rs.compactQueueLock.New("RocksDBStore::comact_thread_lock")
 	rs.compactQueueStop = false

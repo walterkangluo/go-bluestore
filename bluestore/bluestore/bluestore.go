@@ -10,7 +10,7 @@ import (
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
 	ctypes "github.com/go-bluestore/common/types"
-	lrdb "github.com/go-bluestore/lib/rockdb"
+	lrdb "github.com/go-bluestore/lib/gorocksdb"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 	"math"
@@ -713,7 +713,6 @@ func (bs *BlueStore) openDB(create bool) error {
 
 		if create {
 			log.Debug("%v and create dir %s.", env, fn)
-			//
 			r = env.CreateDir(fn)
 			utils.AssertTrue(r == nil)
 			if bs.Cct.Conf.RocksDBSeperateWalDir {

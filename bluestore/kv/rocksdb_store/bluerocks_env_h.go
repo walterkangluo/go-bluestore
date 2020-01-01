@@ -5,7 +5,7 @@ package rocksdb_store
 import "C"
 import (
 	"github.com/go-bluestore/bluestore/bluefs"
-	lrdb "github.com/go-bluestore/lib/rockdb"
+	lrdb "github.com/go-bluestore/lib/gorocksdb"
 )
 
 type BlueRocksEnv struct {

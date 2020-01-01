@@ -3,27 +3,28 @@ package rocksdb_store
 import (
 	"github.com/go-bluestore/bluestore"
 	"github.com/go-bluestore/bluestore/types"
-	lrdb "github.com/go-bluestore/lib/rockdb"
+	lrdb "github.com/go-bluestore/lib/gorocksdb"
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
+	"strconv"
 	"strings"
 	"syscall"
 )
 
-type dbPath struct {
-	path string
-	size string
-}
 
-func parsePath(path string) []dbPath {
+func parsePath(path string) []*lrdb.DBPath {
 	split := strings.Split(path, ",")
-	if len(split)%2 != 0 {
+	if len(split) % 2 != 0 {
 		log.Error("invalid path %s.", path)
 	}
 
-	dbPaths := make([]dbPath, 0)
+	m := len(split) / 2
+	dbPaths := make([]*lrdb.DBPath, m)
 	for i := 0; i < len(split); i = i + 2 {
-		dbPaths = append(dbPaths, dbPath{path: split[i], size: split[i+1]})
+		path := split[i]
+		size, err := strconv.ParseInt(split[i+1], 10, 64)
+		utils.AssertTrue(err == nil)
+		dbPaths[i] = lrdb.NewDBPath(path, uint64(size))
 	}
 	return dbPaths
 }
@@ -38,55 +39,55 @@ func createCephRocksDBLogger(cct *types.CephContext) *cephRocksDBLogger {
 	}
 }
 
-type RockDBOpt struct {
-	// confirm return type of CreateDBStatistics()
-	statistics      string
-	walDir          string
-	createIfMissing bool
-	dbPaths         []dbPath
-	infoLog         *cephRocksDBLogger
-	env             *lrdb.Env
+type MergeOperatorRouter struct {
+	store *RocksDBStore
 }
 
-// TODO: parse options
-func parseOptionsFromString(optStr string, opt *RockDBOpt) error {
-	//strMap := make(map[string]string)
-
-	return nil
+func NewMergeOperatorRouter(s *RocksDBStore) *MergeOperatorRouter {
+	return &MergeOperatorRouter{store: s}
 }
+
+// TODO:
+func (mr *MergeOperatorRouter) Name() string {
+	return ""
+}
+
+// TODO:
+func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+	return nil, false
+}
+
 
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
-	var opt RockDBOpt
-	if 0 != len(rs.optionStr) {
-		r := parseOptionsFromString(rs.optionStr, &opt)
-		if nil != r {
-			return syscall.EINVAL
-		}
+	var r error
+	opts := lrdb.NewDefaultOptions()
+	opts, r = lrdb.GetOptionsFromString(opts, rs.optionStr)
+	if nil != r {
+		log.Error("error option string %s.", rs.optionStr)
+		return syscall.EINVAL
 	}
 
 	if bluestore.GConf.RocksDBPerf {
-		//opt.statistics = dbstats
+		opts.EnableStatistics()
 	}
 
-	opt.createIfMissing = createIfMissing
+	opts.SetCreateIfMissing(createIfMissing)
 	if bluestore.GConf.RocksDBSeperateWalDir {
-		opt.walDir = rs.path + ".wal"
+		opts.SetWalDir(rs.path + ".wal")
 	}
 
 	// 解析DB path信息，格式为： path：size
 	if 0 != len(bluestore.GConf.RocksDBPaths) {
-		opt.dbPaths = parsePath(bluestore.GConf.RocksDBPaths)
-		utils.AssertTrue(0 != len(opt.dbPaths))
+		opts.SetDBPaths(parsePath(bluestore.GConf.RocksDBPaths))
 	}
 
 	if bluestore.GConf.RocksDBLogToCephLog {
-		opt.infoLog = nil
-		opt.infoLog = createCephRocksDBLogger(bluestore.GCephContext)
+		opts.SetInfoLogLevel(lrdb.InfoInfoLogLevel)
 	}
 
 	if rs.priv != nil {
 		log.Debug("using ceph env %v", rs.priv.(*lrdb.Env))
-		opt.env = rs.priv.(*lrdb.Env)
+		opts.SetEnv(rs.priv.(*lrdb.Env))
 	}
 
 	// caches
@@ -94,8 +95,60 @@ func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 		rs.cacheSize = bluestore.GConf.BlueStoreCacheSize
 	}
 
-	//rowCacheSize := uint64(float64(rs.cacheSize) * bluestore.GConf.RocksDBCacheRowRatio)
-	//blockSize := rs.cacheSize - rowCacheSize
+	rowCacheSize := uint64(float64(rs.cacheSize) * bluestore.GConf.RocksDBCacheRowRatio)
+	blockCacheSize := rs.cacheSize - rowCacheSize
+
+	if bluestore.GConf.RocksDBCacheType == "lru" {
+		rs.BbtOpts.SetBlockCache(lrdb.NewLRUCache(uint64(blockCacheSize)))
+	} else {
+		log.Error("not support cache type %s now.", bluestore.GConf.RocksDBCacheType)
+		return syscall.EINVAL
+	}
+	rs.BbtOpts.SetBlockSize(bluestore.GConf.RocksDBBlockSize)
+
+	// TODO: confirm opt row cache
+	//if rowCacheSize > 0 {
+	//	opt.rowCache = lrdb.NewLRUCache(rowCacheSize)
+	//	opts.
+	//}
+
+	bloomBits := bluestore.GConf.RocksDBBloomBitsPerKey
+	if bloomBits > 0 {
+		rs.BbtOpts.SetFilterPolicy(lrdb.NewBloomFilter(int(bloomBits)))
+	}
+
+	if "binary_search" == bluestore.GConf.RocksDBIndexType {
+		rs.BbtOpts.SetIndexType(lrdb.KBinarySearchIndexType)
+	}
+
+	if "hash_search" == bluestore.GConf.RocksDBIndexType {
+		rs.BbtOpts.SetIndexType(lrdb.KHashSearchIndexType)
+	}
+
+	if "two_search" == bluestore.GConf.RocksDBIndexType {
+		rs.BbtOpts.SetIndexType(lrdb.KTwoLevelIndexSearchIndexType)
+	}
+
+	rs.BbtOpts.SetCacheIndexAndFilterBlocks(bluestore.GConf.RocksDBCacheIndexAndFilterBlocks)
+	rs.BbtOpts.SetCacheIndexAndFilterBlocksWithHighPriority(bluestore.GConf.RocksDBCacheIndexAndFilterBlocksWithHighProority)
+	rs.BbtOpts.SetPartitionFilters(bluestore.GConf.RocksDBPartitionFilters)
+	rs.BbtOpts.SetMetadataBlockSize(bluestore.GConf.RockdSBMetadataBlockSize)
+	rs.BbtOpts.SetPinL0FilterAndIndexBlocksInCache(bluestore.GConf.RocksDBPinL0FilterAndIndexBlocksInCache)
+
+	opts.SetBlockBasedTableFactory(rs.BbtOpts)
+
+	log.Debug("block_size %d, block_cache_size %d, row_cache_size %d.",
+		bluestore.GConf.RocksDBBlockSize, blockCacheSize, rowCacheSize)
+
+	opts.SetMergeOperator(NewMergeOperatorRouter(rs))
+	var err error
+	rs.DB, err = lrdb.OpenDb(opts, rs.path)
+	if err != nil {
+		log.Error("open db %s failed with err %v.", rs.path, err)
+		return syscall.EINVAL
+	}
+
 
 	return nil
+
 }
