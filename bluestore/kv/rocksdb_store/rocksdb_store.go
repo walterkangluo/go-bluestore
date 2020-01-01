@@ -56,6 +56,11 @@ func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][
 	return nil, false
 }
 
+func (rs *RocksDBStore) compact() {
+	rs.logger.Inc(lRocksDBCompact, uint64(1))
+	rs.DB.CompactRange(lrdb.Range{Start:nil, Limit:nil})
+}
+
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 	var r error
 	opts := lrdb.NewDefaultOptions()
@@ -146,6 +151,34 @@ func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 		return syscall.EINVAL
 	}
 
-	return nil
+	plb := types.CreatePerCountersBuilder(bluestore.GCephContext, "rocksdb", lRocksDBFirst, lRocksDBLast)
 
+	plb.AddU64Counter(lRocksDBGets, "get", "Gets", "", 0, 0)
+	plb.AddU64Counter(lRocksDBTxns, "submit_transaction", "Submit transaction", "", 0, 0)
+	plb.AddU64Counter(lRocksDBTxnsSync, "submit_transaction_sync", "Submit transaction sync", "", 0, 0)
+
+	plb.AddTimeAvg(lRocksDBGetLatency, "get_latency", "Get latency", "", 0, 0)
+	plb.AddTimeAvg(lRocksDBSubmitLatency, "submit_latency", "Submit latency", "", 0, 0)
+	plb.AddTimeAvg(lRocksDBSubmitSyncLatency, "submit_sync_latency", "Submit latency sync", "", 0, 0)
+
+	plb.AddU64Counter(lRocksDBCompact, "compact", "Compactions", "", 0, 0)
+	plb.AddU64Counter(lRocksDBCompactRange, "compact_range", "Compactions by range", "", 0, 0)
+	plb.AddU64Counter(lRocksDBCompactQueueMerge, "compact_queue_merge", "Mergings of ranges in compaction queue", "", 0, 0)
+	plb.AddU64Counter(lRocksDBCompactQueueLen, "compact_queue_len", "Length of compaction queue", "", 0, 0)
+
+	plb.AddTimeAvg(lRocksDBWriteWalTime, "rocksdb_write_wal_time", "Rocksdb write wal time", "", 0, 0)
+	plb.AddTimeAvg(lRocksDBWriteMemTableTime, "rocksdb_write_memetable_time", "Rocksdb write memtable time", "", 0, 0)
+	plb.AddTimeAvg(lRocksDBWriteDelayTime, "rocksdb_write_delay_time", "Rocksdb write delay time", "", 0, 0)
+	plb.AddTimeAvg(lRocksDBWritePreAndPostProcessTime, "rocksdb_write_pre_and_post_time", "Total time spent on writing a record, excluding write process", "", 0, 0)
+
+	logger := plb.CreatePerfCounters()
+	rs.cct.GetPerfCountersCollection().Add(logger)
+
+	if rs.CompactOnMount {
+		log.Error("Compacting rocksdb store...")
+		rs.compact()
+		log.Error("Finished compacting rocksdb store ")
+	}
+
+	return nil
 }

@@ -10,6 +10,25 @@ import (
 	"sync"
 )
 
+const (
+	lRocksDBFirst = 34300 + iota
+	lRocksDBGets
+	lRocksDBTxns
+	lRocksDBTxnsSync
+	lRocksDBGetLatency
+	lRocksDBSubmitLatency
+	lRocksDBSubmitSyncLatency
+	lRocksDBCompact
+	lRocksDBCompactRange
+	lRocksDBCompactQueueMerge
+	lRocksDBCompactQueueLen
+	lRocksDBWriteWalTime
+	lRocksDBWriteMemTableTime
+	lRocksDBWriteDelayTime
+	lRocksDBWritePreAndPostProcessTime
+	lRocksDBLast
+)
+
 type RocksDBStore struct {
 	cct    *types.CephContext
 	logger *types.PerfCounters
@@ -74,10 +93,13 @@ func (rs *RocksDBStore) Init(string) error {
 	return nil
 }
 
-func (rs *RocksDBStore) CreateAndOpen(str string) error {
+func (rs *RocksDBStore) CreateAndOpen(stream string) error {
+	if nil != rs.Env {
+		return nil
+	}
 	return nil
 }
 
-func (rs *RocksDBStore) Open(str string) error {
-	return rs.doOpen(str, false)
+func (rs *RocksDBStore) Open(stream string) error {
+	return rs.doOpen(stream, false)
 }
