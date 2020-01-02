@@ -103,7 +103,7 @@ func (bs *BlueStore) readBdevLabel(cct *types.CephContext, path string, label *b
 	bl.Decode(*(*[]byte)(unsafe.Pointer(label)), p)
 	var t types.BufferList
 	t.SubstrOf(&bl, 0, p.GetOff())
-	crc = t.CRC32(-1)
+	crc = t.CRC32(math.MaxUint32)
 	bl.Decode(*(*[]byte)(unsafe.Pointer(&expectedCrc)), p)
 
 	if crc != expectedCrc {
@@ -134,15 +134,7 @@ func (bs *BlueStore) lockFsid() int {
 	return 0
 }
 
-func (bs *BlueStore) openDb(create bool) int {
-	return 0
-}
-
 func (bs *BlueStore) openSuperMeta() int {
-	return 0
-}
-
-func (bs *BlueStore) openFm(create bool) int {
 	return 0
 }
 
@@ -262,8 +254,8 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 		goto outFsid
 	}
 
-	r = bs.openDb(false)
-	if r < 0 {
+	e = bs.openDB(false)
+	if e != nil {
 		goto outBdev
 	}
 
@@ -276,8 +268,8 @@ func (bs *BlueStore) mount(kvOnly bool) int {
 		goto outDb
 	}
 
-	r = bs.openFm(false)
-	if r < 0 {
+	e = bs.openFm(false)
+	if e != nil {
 		goto outDb
 	}
 
@@ -522,6 +514,11 @@ failclose:
 fail:
 	bs.bdev = nil
 	return r
+}
+
+func (bs *BlueStore) openFm(create bool) error {
+	utils.AssertTrue(nil == bs.fm)
+	return nil
 }
 
 func (bs *BlueStore) openDB(create bool) error {
@@ -859,8 +856,7 @@ func (bs *BlueStore) Mkfs() error {
 	} else {
 		if !bs.fsId.IsZero() && bs.fsId != oldFsId {
 			log.Error("ondisk uuid %x != provided %x.", oldFsId, bs.fsId)
-			//r = -syscall.EINVAL
-			r = -0x16
+			e = syscall.EINVAL
 		}
 		bs.fsId = oldFsId
 	}
@@ -868,6 +864,7 @@ func (bs *BlueStore) Mkfs() error {
 	e = bs.setupBlockSymlinkOrFile(
 		"block", bs.Cct.Conf.BlueStoreBlockPath, bs.Cct.Conf.BlueStoreBlockSize, bs.Cct.Conf.BlueStoreBlockCreate)
 	if nil != e {
+		log.Error("setup symlink for block failed.")
 		goto outCloseFsId
 	}
 
@@ -875,18 +872,21 @@ func (bs *BlueStore) Mkfs() error {
 		e = bs.setupBlockSymlinkOrFile(
 			"block.wal", bs.Cct.Conf.BlueStoreBlockWalPath, bs.Cct.Conf.BlueStoreBlockWalSize, bs.Cct.Conf.BlueStoreBlockWalCreate)
 		if nil != e {
+			log.Error("setup symlink for block.wal failed.")
 			goto outCloseFsId
 		}
 
 		e = bs.setupBlockSymlinkOrFile(
 			"block.db", bs.Cct.Conf.BlueStoreBlockDbPath, bs.Cct.Conf.BlueStoreBlockDbSize, bs.Cct.Conf.BlueStoreBlockDbCreate)
 		if nil != e {
+			log.Error("setup symlink for block.db failed.")
 			goto outCloseFsId
 		}
 	}
 
 	e = bs.openBdev(true)
 	if e != nil {
+		log.Error("open bdev failed %v.", e)
 		goto outCloseFsId
 	}
 
@@ -904,6 +904,11 @@ func (bs *BlueStore) Mkfs() error {
 	if !utils.ISP2(bs.minAllocSize) {
 		log.Error("min_alloc_size %x is not power of 2 aligned!", bs.minAllocSize)
 		e = syscall.EINVAL
+		goto outCloseBdev
+	}
+
+	e = bs.openDB(true)
+	if nil != e {
 		goto outCloseBdev
 	}
 

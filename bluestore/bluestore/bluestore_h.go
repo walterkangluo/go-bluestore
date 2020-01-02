@@ -4,6 +4,7 @@ import (
 	"github.com/go-bluestore/bluestore/allocator"
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
+	fm "github.com/go-bluestore/bluestore/freeListManager"
 	"github.com/go-bluestore/bluestore/kv/keyvalue_db"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/thread_pool"
@@ -193,15 +194,15 @@ type BlueStore struct {
 	blueFsLastBalance              timestamp.Timestamp
 	nextDumpOnBlueFsBalanceFailure timestamp.Timestamp
 
-	db           keyvalue_db.KeyValueDB
+	db           keyvalue_db.KeyValueDBI
 	bdev         *blockdevice.BlockDevice
 	freeListType string
-	// FreeListManage
-	alloc   *allocator.Allocator
-	fsId    types.UUID
-	pathFd  int
-	fsIdFd  int
-	mounted bool
+	fm           *fm.FreelistManager
+	alloc        *allocator.Allocator
+	fsId         types.UUID
+	pathFd       int
+	fsIdFd       int
+	mounted      bool
 
 	collLock sync.RWMutex
 

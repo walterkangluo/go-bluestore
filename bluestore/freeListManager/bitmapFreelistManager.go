@@ -7,9 +7,11 @@ import (
 )
 
 type BitmapFreelistManager struct {
-	FreelistManager
-	kvdb *keyvalue_db.KeyValueDB
-	Lock sync.Mutex
+	*FreelistManager
+	metaPrefix   string
+	bitmapPrefix string
+	kvdb         keyvalue_db.KeyValueDBI
+	Lock         sync.Mutex
 
 	size          uint64
 	bytesPerBlock uint64
@@ -21,4 +23,18 @@ type BitmapFreelistManager struct {
 	allSetBl        types.BufferList
 	enumerateOffset uint64
 	enumerateBlPos  int
+}
+
+func CreateBitmapFreelistManager(cct *types.CephContext, db keyvalue_db.KeyValueDBI,
+	metaPrefix string, bitmapPrefix string) (bmfm *BitmapFreelistManager) {
+
+	bmfm = &BitmapFreelistManager{
+		metaPrefix:     metaPrefix,
+		kvdb:           db,
+		enumerateBlPos: 0,
+		bitmapPrefix:   bitmapPrefix,
+	}
+	bmfm.FreelistManager.New(cct)
+
+	return
 }

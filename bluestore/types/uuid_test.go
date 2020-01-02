@@ -45,5 +45,4 @@ func TestUuidD_IsZero(t *testing.T) {
 
 	s = strings.Compare(dd, cc)
 	assert.Equal(1, s)
-
 }
