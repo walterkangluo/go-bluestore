@@ -4,13 +4,46 @@ import (
 	"fmt"
 	"github.com/go-bluestore/common"
 	"github.com/go-bluestore/utils"
+	"hash/crc32"
 	"os"
+	"sync"
+	"sync/atomic"
 )
 
+var (
+	BufferTrackCrc          bool   = GetEnvBool("CEPH_BUFFER_TRACK")
+	BufferCachedCrc         uint64 = 0
+	BufferCachedCrcAdjusted uint64 = 0
+	BufferMissedCrc         uint64 = 0
+)
+
+func GetEnvBool(key string) bool {
+	val := os.Getenv(key)
+	if len(val) == 0 {
+		return false
+	}
+	if val == "off" || val == "no" || val == "false" || val == "0" {
+		return false
+	}
+	return true
+}
+
+type ofsT struct {
+	begin uint64
+	end   uint64
+}
+
+type ccrcT struct {
+	base uint32
+	crc  uint32
+}
+
 type Raw struct {
-	data []byte //data stored
-	off  uint64 //
-	len  uint64 //存储的数据长度，0也算
+	data        []byte //data stored
+	off         uint64 //
+	len         uint64 //存储的数据长度，0也算
+	CrcMap      map[ofsT]ccrcT
+	crcSpinlock *sync.Mutex
 }
 
 type BufferList struct {
@@ -26,9 +59,29 @@ func (r *Raw) GetOff() uint64 {
 }
 
 func (r *Raw) Length() uint64 {
-	return uint64(len(r.data))
+	return r.len
 }
 
+func (r *Raw) GetCrc(fromTo ofsT, crc *ccrcT) bool {
+	r.crcSpinlock.Lock()
+	i, ok := r.CrcMap[fromTo]
+	if ok {
+		*crc = i
+		r.crcSpinlock.Unlock()
+		return true
+	} else {
+		r.crcSpinlock.Unlock()
+		return false
+	}
+}
+
+func (r *Raw) SetCrc(fromTo *ofsT, crc *ccrcT) {
+	r.crcSpinlock.Lock()
+	r.CrcMap[*fromTo] = *crc
+	r.crcSpinlock.Unlock()
+}
+
+//BufferList func
 func (bl *BufferList) Init() {
 	bl.ptr = make([]Raw, 0)
 	bl.size = 0
@@ -53,8 +106,9 @@ func (bl *BufferList) Add(data []byte, dLen uint64) {
 
 		bl.delete = bl.delete[1:]
 	} else {
-		raw := Raw{data, bl.size, dLen}
-		bl.ptr = append(bl.ptr, raw)
+		raw := new(Raw)
+		raw.CrcMap = make(map[ofsT]ccrcT)
+		bl.ptr = append(bl.ptr, *raw)
 		bl.size++
 		bl.len += dLen
 	}
@@ -88,6 +142,10 @@ func (bl *BufferList) GetAt(pos uint64) *Raw {
 }
 
 func (bl *BufferList) Length() uint64 {
+	return bl.len
+}
+
+func (bl *BufferList) Size() uint64 {
 	return bl.size
 }
 
@@ -123,7 +181,7 @@ func (bl *BufferList) SubstrOf(other *BufferList, off uint64, len uint64) {
 	}
 
 	var i uint64
-	for i = 0; i < other.Length(); i++ {
+	for i = 0; i < other.Size(); i++ {
 		if off > 0 && off >= other.GetAt(i).Length() {
 			off -= other.GetAt(i).Length()
 		}
@@ -144,15 +202,36 @@ func (bl *BufferList) SubstrOf(other *BufferList, off uint64, len uint64) {
 	}
 }
 
-func (bl *BufferList) CRC32(src interface{}) uint32 {
-
-	switch src.(type) {
-	case int:
-		if src.(int) == -1 {
-			return utils.CRC32Byte(nil)
+func (bl *BufferList) CRC32(crc uint32) uint32 {
+	for i := uint64(0); i < bl.Size(); i++ {
+		r := bl.ptr[i]
+		if r.Length() != 0 {
+			var ofs = ofsT{r.GetOff(), r.GetOff() + r.Length()}
+			var ccrc ccrcT
+			if r.GetCrc(ofs, &ccrc) {
+				if ccrc.base == crc {
+					crc = ccrc.crc
+					if BufferTrackCrc {
+						atomic.AddUint64(&BufferCachedCrc, 1)
+					}
+				} else {
+					crc = crc32.Update(crc, crc32.IEEETable, r.data)
+					if BufferTrackCrc {
+						atomic.AddUint64(&BufferCachedCrcAdjusted, 1)
+					}
+				}
+			} else {
+				if BufferTrackCrc {
+					atomic.AddUint64(&BufferMissedCrc, 1)
+				}
+				var base = crc
+				crc = crc32.Update(crc, crc32.IEEETable, r.data)
+				var ccrc ccrcT
+				ccrc.base = base
+				ccrc.crc = crc
+				r.SetCrc(&ofs, &ccrc)
+			}
 		}
-	default:
-		panic("not support")
 	}
-	return 0
+	return crc
 }
