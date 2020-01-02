@@ -743,7 +743,7 @@ func (bs *BlueStore) openDB(create bool) error {
 		}
 	}
 
-	bs.db = keyvalue_db.CreateKeyValueDB(bs.Cct, kvBackend, fn, (unsafe.Pointer(env)))
+	bs.db = keyvalue_db.CreateKeyValueDB(bs.Cct, kvBackend, fn, env)
 	if nil == bs.db {
 		log.Error("error create db")
 		if nil != bs.blueFs {
@@ -791,11 +791,9 @@ freeBlueFs:
 }
 
 func (bs *BlueStore) Mkfs() error {
-	log.Debug("path is %s.", bs.Path)
 	var r int
 	var e error
 	var oldFsId types.UUID
-	// var freeListType = "bitmap"
 
 	log.Debug("path is %s.", bs.Path)
 

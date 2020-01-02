@@ -46,8 +46,15 @@ type Dir struct {
 	fileMap map[string]fileRef
 }
 
-func (d *Dir) New() {
+func (d *Dir) new() {
 	d.RefCountedObject.New(nil, 0)
+}
+
+func (d *Dir) empty() bool {
+	if len(d.fileMap) == 0 {
+		return true
+	}
+	return false
 }
 
 type dirRef struct {

@@ -7,7 +7,9 @@ import "C"
 import (
 	"github.com/go-bluestore/bluestore/types"
 	lrdb "github.com/go-bluestore/lib/gorocksdb"
+	"github.com/go-bluestore/log"
 	"sync"
+	"syscall"
 )
 
 const (
@@ -36,7 +38,7 @@ type RocksDBStore struct {
 	priv   interface{}
 
 	DB      *lrdb.DB
-	Env     *lrdb.Env
+	Env     *BlueRocksEnv
 	BbtOpts *lrdb.BlockBasedTableOptions
 
 	optionStr    string
@@ -71,7 +73,7 @@ func CreateRocksDBStore(c *types.CephContext, path string, p interface{}) (rs *R
 	rs.DB = nil
 	// TODO: to confirm p
 	//rs.Env = gorocksdb.NewNativeEnv(p)
-	rs.Env = lrdb.NewDefaultEnv()
+	rs.Env = p.(*BlueRocksEnv)
 	//rs.dbStats = nil
 	rs.compactQueueLock.New("RocksDBStore::comact_thread_lock")
 	rs.compactQueueStop = false
@@ -94,10 +96,23 @@ func (rs *RocksDBStore) Init(string) error {
 }
 
 func (rs *RocksDBStore) CreateAndOpen(stream string) error {
+	var r error
 	if nil != rs.Env {
-		return nil
+		var result BlueRocksDirectory
+		r = rs.Env.NewDirectory(stream, &result)
+		if r != nil {
+			log.Error("failed to create dir %s.", stream)
+			return r
+		}
+	} else {
+		r = syscall.Mkdir(rs.path, 0755)
+		if r != nil || r != syscall.EEXIST {
+			log.Error("failed to create %s.", rs.path)
+			return r
+		}
 	}
-	return nil
+
+	return rs.doOpen(stream, true)
 }
 
 func (rs *RocksDBStore) Open(stream string) error {

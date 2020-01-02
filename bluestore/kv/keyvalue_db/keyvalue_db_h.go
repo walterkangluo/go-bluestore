@@ -3,7 +3,7 @@ package keyvalue_db
 import (
 	"github.com/go-bluestore/bluestore/kv/rocksdb_store"
 	"github.com/go-bluestore/bluestore/types"
-	"unsafe"
+	"github.com/go-bluestore/log"
 )
 
 //type KeyValueDB struct {
@@ -21,18 +21,11 @@ type KeyValueDB interface {
 	Open(string) error
 }
 
-func CreateKeyValueDB(cct *types.CephContext, _type string, dir string, p unsafe.Pointer) KeyValueDB {
-	if _type == "leveldb" {
-		return nil
-	}
-
+func CreateKeyValueDB(cct *types.CephContext, _type string, dir string, p interface{}) KeyValueDB {
 	if _type == "rocksdb" {
 		return rocksdb_store.CreateRocksDBStore(cct, dir, p)
+	} else {
+		log.Error("only support rocksdb now.")
 	}
-
-	if _type == "memdb" {
-		return nil
-	}
-
 	return nil
 }

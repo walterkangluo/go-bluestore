@@ -316,8 +316,37 @@ func (bfs *BlueFS) MkDir(dirName string) error {
 	}
 
 	var ref dirRef
-	ref.New()
+	ref.new()
 	bfs.dirMap[dirName] = ref
 	bfs.logT.OpDirCreate(dirName)
+	return nil
+}
+
+func (bfs *BlueFS) DirExists(dirName string) bool {
+	bfs.lock.Lock()
+	defer bfs.lock.Unlock()
+	if _, ok := bfs.dirMap[dirName]; !ok {
+		return false
+	}
+	return true
+}
+
+func (bfs *BlueFS) RmDir(dirName string) error {
+	bfs.lock.Lock()
+	defer bfs.lock.Unlock()
+
+	dir, ok := bfs.dirMap[dirName]
+	if !ok {
+		log.Error("dir %s not exists.", dirName)
+		return syscall.ENOENT
+	}
+
+	if !dir.empty() {
+		log.Error("directory %s not empty.", dirName)
+		return syscall.ENOTEMPTY
+	}
+
+	delete(dir.fileMap, dirName)
+	bfs.logT.OpDirRemove(dirName)
 	return nil
 }

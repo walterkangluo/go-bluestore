@@ -119,6 +119,36 @@ const (
 	opJumpSeq
 )
 
+type transEncode struct {
+	opCode int
+	data   []byte
+}
+
+type opAllocT struct {
+	id     uint8
+	offset uint64
+	length uint64
+}
+
+type opDirCreateOrRmT struct {
+	dir string
+}
+
+type opDirLinkT struct {
+	dir  string
+	file string
+	ino  uint64
+}
+
+type opDirUnlinkT struct {
+	dir  string
+	file string
+}
+
+type opFileUpdateT struct {
+	file BlueFsFnodeT
+}
+
 type BlueFsTransactionT struct {
 	Uuid types.UUID
 	Seq  uint64
@@ -137,5 +167,10 @@ func (bt *BlueFsTransactionT) OpAllocAdd(id uint, start uint64, len uint64) {
 
 func (bt *BlueFsTransactionT) OpDirCreate(dir string) {
 	bt.opBl.Encode(utils.NumToBytes(opDirCreate))
+	bt.opBl.Encode([]byte(dir))
+}
+
+func (bt *BlueFsTransactionT) OpDirRemove(dir string) {
+	bt.opBl.Encode(utils.NumToBytes(opDirRemove))
 	bt.opBl.Encode([]byte(dir))
 }

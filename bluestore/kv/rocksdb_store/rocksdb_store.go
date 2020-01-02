@@ -58,7 +58,7 @@ func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][
 
 func (rs *RocksDBStore) compact() {
 	rs.logger.Inc(lRocksDBCompact, uint64(1))
-	rs.DB.CompactRange(lrdb.Range{Start:nil, Limit:nil})
+	rs.DB.CompactRange(lrdb.Range{Start: nil, Limit: nil})
 }
 
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
@@ -79,7 +79,7 @@ func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 		opts.SetWalDir(rs.path + ".wal")
 	}
 
-	// 解析DB path信息，格式为： path：size
+	// path：size
 	if 0 != len(bluestore.GConf.RocksDBPaths) {
 		opts.SetDBPaths(parsePath(bluestore.GConf.RocksDBPaths))
 	}
