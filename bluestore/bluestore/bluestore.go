@@ -5,8 +5,9 @@ import (
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	btypes "github.com/go-bluestore/bluestore/bluestore/types"
-	"github.com/go-bluestore/bluestore/kv/keyvalue_db"
-	"github.com/go-bluestore/bluestore/kv/rocksdb_store"
+	"github.com/go-bluestore/bluestore/freeListManager"
+	"github.com/go-bluestore/bluestore/kv"
+	rsenv "github.com/go-bluestore/bluestore/kv/env"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/common"
 	ctypes "github.com/go-bluestore/common/types"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-bluestore/log"
 	"github.com/go-bluestore/utils"
 	"math"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
@@ -516,8 +518,97 @@ fail:
 	return r
 }
 
+type Int64ArrayMergeOperator struct {
+}
+
+func (imo *Int64ArrayMergeOperator) MergeNonexistent(rData string, rLen int, newValue *string) {
+	*newValue = rData[:rLen]
+}
+
+func (imo *Int64ArrayMergeOperator) Merge(rData string, rLen int, lData string, lLen int, newValue *string) {
+	utils.AssertTrue(lLen == rLen)
+	utils.AssertTrue(rLen%8 == 0)
+	nv := []rune(*newValue)
+	lv := []rune(lData)
+	rv := []rune(rData)
+	for i := 0; i < rLen>>3; i++ {
+		nv[i] = lv[i] + nv[i]
+	}
+	*newValue = string(rv)
+}
+
+func (imo *Int64ArrayMergeOperator) Name() string {
+	return "int64_array"
+}
+
 func (bs *BlueStore) openFm(create bool) error {
 	utils.AssertTrue(nil == bs.fm)
+
+	bs.fm = freeListManager.CreateFreelistManage(bs.Cct, bs.freelistType, bs.db, PrefixSAlloc)
+	if create {
+		log.Debug("initializing freespace")
+		t := bs.db.GetTransaction()
+		var bl types.BufferList
+		ss := []byte(bs.freelistType)
+		bl.Add(ss, uint64(len(ss)))
+		t.Set3(PrefixSuper, "freelist_type", bl)
+
+		utils.AssertTrue(bs.Cct.Conf.BdevBlockSize <= int64(bs.minAllocSize))
+		bs.fm.Create(bs.bdev.GetSize(), uint64(bs.minAllocSize), t)
+
+		resvered := utils.RoundUpTo(int64(math.Max(float64(SuperReserved), float64(bs.minAllocSize))), int64(bs.minAllocSize))
+		bs.fm.Allocate(uint64(0), uint64(resvered), t)
+
+		if bs.Cct.Conf.BlueStoreBlueFs {
+			utils.AssertTrue(1 == len(bs.blueFsExtents))
+			p := bs.blueFsExtents[0]
+			resvered = utils.RoundUpTo(int64(p.Start+p.Length), int64(bs.minAllocSize))
+			log.Debug("revered %x for bluefs.", resvered)
+			var bl types.BufferList
+			bl.Encode(p)
+		}
+
+		if bs.Cct.Conf.BlueStoreDebugPrefill > 0 {
+			end := bs.bdev.GetSize() - uint64(resvered)
+			log.Debug("pre-fragmenting fresspace using %f with max free extent %d.",
+				bs.Cct.Conf.BlueStoreDebugPrefill, bs.Cct.Conf.BlueStoreDebugPreFragmentMax)
+			start := utils.P2RoundUp(uint64(resvered), bs.minAllocSize)
+			maxB := bs.Cct.Conf.BlueStoreDebugPreFragmentMax / bs.minAllocSize
+			r := bs.Cct.Conf.BlueStoreDebugPrefill
+			r /= 1.0 - r
+			stop := false
+			for {
+				if stop || start >= end {
+					break
+				}
+				l := uint64(rand.Int63()) % (maxB + 1) * bs.minAllocSize
+				if start+l > end {
+					l = end - start
+					l = utils.P2Align(l, bs.minAllocSize)
+				}
+				utils.AssertTrue(start+l <= end)
+
+				u := uint64(1 + r*float64(l))
+				if start+l+u > end {
+					u = end - (start + l)
+					u = utils.P2Align(u, bs.minAllocSize)
+					stop = true
+				}
+				utils.AssertTrue(start+l+u <= end)
+
+				log.Debug("free start %x ~ %x use %x.", start, l, u)
+
+				if u == 0 {
+					break
+				}
+
+				bs.fm.Allocate(start+l, u, t)
+				start += l + u
+			}
+		}
+		bs.db.GetTransaction()
+
+	}
 	return nil
 }
 
@@ -528,7 +619,7 @@ func (bs *BlueStore) openDB(create bool) error {
 	var fn string
 	var res string
 	var options string
-	var env *rocksdb_store.BlueRocksEnv
+	var env *rsenv.BlueRocksEnv
 
 	// 1. get kv_backend type
 	var kvBackend string
@@ -635,7 +726,7 @@ func (bs *BlueStore) openDB(create bool) error {
 			initial = float64(utils.P2RoundUp(uint64(initial), bs.Cct.Conf.BlueFsAllocSize))
 			start := utils.P2Align((bs.bdev.BlockDeviceFunc.GetSize()-uint64(initial))/2, bs.Cct.Conf.BlueFsAllocSize)
 			bs.blueFs.AddBlockExtent(bs.blueFsSharedBdev, start, uint64(initial))
-			bs.blueFsExtents = append(bs.blueFsExtents, Extents{start: start, length: uint64(initial)})
+			bs.blueFsExtents = append(bs.blueFsExtents, Extents{Start: start, Length: uint64(initial)})
 		}
 
 		// block.wal to store log file of rockdb
@@ -685,7 +776,7 @@ func (bs *BlueStore) openDB(create bool) error {
 
 		//var env *lrdb.Env
 		if bs.Cct.Conf.BlueStoreBlueFsEnvMirror {
-			a := rocksdb_store.NewBlueRocksEnv(bs.blueFs)
+			a := rsenv.NewBlueRocksEnv(bs.blueFs)
 			b := lrdb.NewDefaultEnv()
 			if create {
 				cmd := "rm -rf " + bs.Path + "/db " + bs.Path + "/db.slow" + bs.Path + "/db.wal"
@@ -693,9 +784,9 @@ func (bs *BlueStore) openDB(create bool) error {
 				_, r := res.Output()
 				utils.AssertTrue(r == nil)
 			}
-			env = rocksdb_store.NewEnvMirror(b, a.Wrapper, false, true)
+			env = rsenv.NewEnvMirror(b, a.Wrapper, false, true)
 		} else {
-			env = rocksdb_store.NewBlueRocksEnv(bs.blueFs)
+			env = rsenv.NewBlueRocksEnv(bs.blueFs)
 			fn = "db"
 		}
 
@@ -740,7 +831,7 @@ func (bs *BlueStore) openDB(create bool) error {
 		}
 	}
 
-	bs.db = keyvalue_db.CreateKeyValueDB(bs.Cct, kvBackend, fn, env)
+	bs.db = kv.CreateKeyValueDB(bs.Cct, kvBackend, fn, env)
 	if nil == bs.db {
 		log.Error("error create db")
 		if nil != bs.blueFs {
@@ -750,7 +841,7 @@ func (bs *BlueStore) openDB(create bool) error {
 		}
 	}
 
-	bs.db.SetMergeOperator(PrefixState)
+	bs.db.SetMergeOperator(PrefixState, new(Int64ArrayMergeOperator))
 	bs.db.SetCacheSize(uint64(bs.cacheKVRatio) * bs.cacheSize)
 
 	if kvBackend == "rocksdb" {

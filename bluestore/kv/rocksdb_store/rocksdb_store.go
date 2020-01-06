@@ -2,6 +2,7 @@ package rocksdb_store
 
 import (
 	"github.com/go-bluestore/bluestore"
+	"github.com/go-bluestore/bluestore/kv/common"
 	"github.com/go-bluestore/bluestore/types"
 	lrdb "github.com/go-bluestore/lib/gorocksdb"
 	"github.com/go-bluestore/log"
@@ -59,6 +60,20 @@ func (mr *MergeOperatorRouter) FullMerge(key, existingValue []byte, operands [][
 func (rs *RocksDBStore) compact() {
 	rs.logger.Inc(lRocksDBCompact, uint64(1))
 	rs.DB.CompactRange(lrdb.Range{Start: nil, Limit: nil})
+}
+
+func (rs *RocksDBStore) SetMergeOperator(prefix string, opera MergeOperator) {
+	utils.AssertTrue(rs.DB == nil)
+	pair := mergeOperaPair{
+		prefix: prefix,
+		mop:    opera,
+	}
+	rs.mergeOps = append(rs.mergeOps, pair)
+	return
+}
+
+func (rs *RocksDBStore) GetTransaction() common.Transaction {
+	return common.Transaction{TransactionImpl: NewRocksDBTransactionImpl(rs).TransactionImpl}
 }
 
 func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
@@ -181,4 +196,16 @@ func (rs *RocksDBStore) doOpen(str string, createIfMissing bool) error {
 	}
 
 	return nil
+}
+
+// TODO: implement it
+func (rs *RocksDBStore) SubmitTransaction(t common.Transaction) {
+	if bluestore.GConf.RocksDBPerf {
+		// TODO： implement SetPerfLevel
+	}
+	writeOption := lrdb.NewDefaultWriteOptions()
+	writeOption.DisableWAL(rs.DisableWal)
+	_t := &RocksDBTransactionImpl{TransactionImpl: t.TransactionImpl}
+	_t.Bat.NewIterator()
+	//rs.DB.Write()
 }

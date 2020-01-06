@@ -6,6 +6,9 @@ type MdConfigT struct {
 	BlueFsAllocator       string
 	BlueFsMaxLogRunaway   uint64
 
+	BlueStoreDebugPrefill        float64
+	BlueStoreDebugPreFragmentMax uint64
+
 	BlueStoreBlueFs           bool
 	BlueStoreBlueFsMinRation  float64
 	BlueStoreBlueFsGiftRation float64
@@ -46,6 +49,8 @@ type MdConfigT struct {
 	BlueStoreMinAllocSizeHdd uint64
 	BlueStoreMinAllocSizeSSd uint64
 
+	BlueStoreFreelistBlocksPerKey uint64
+
 	BlueStoreDebugPermitAnyBdevLabel bool
 	OsdMaxObjectSize                 uint32
 
@@ -57,7 +62,7 @@ type MdConfigT struct {
 	RocksDBSeperateWalDir  bool
 	RocksDBEnableRmRange   bool
 	RocksDBPaths           string
-	RocksDBPerf            bool
+	RocksDBPerf            bool // advise: disable it with un-implement
 	RocksDBLogToCephLog    bool
 	RocksDBCacheRowRatio   float64
 	RocksDBCacheType       string
@@ -72,6 +77,7 @@ type MdConfigT struct {
 	RocksDBPinL0FilterAndIndexBlocksInCache          bool
 
 	BlueStoreRocksDBOptions string
+	BdevBlockSize           int64
 }
 
 func (md *MdConfigT) GetVal(key interface{}) interface{} {

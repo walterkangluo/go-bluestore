@@ -2,7 +2,6 @@ package blockdevice
 
 import (
 	"github.com/go-bluestore/bluestore/types"
-	types2 "github.com/go-bluestore/common/types"
 	"github.com/go-bluestore/lib/aio"
 	"github.com/go-bluestore/utils"
 	"sync"
@@ -63,6 +62,24 @@ func (io *IOContext) TryAioAwake() {
 	}
 }
 
+type BlockDeviceFunc interface {
+	SupportedBdevLable() bool
+	IsRotational() bool
+	AioSubmit(ioc *IOContext)
+	GetSize() uint64
+	GetBlockSize() uint64
+	CollectMetadata(prefix string, pm *map[string]string) error
+	Read(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext, buffered bool) error
+	ReadRandom(off uint64, len uint64, buf string, buffered bool) error
+	Write(off uint64, bl *types.BufferList, buffered bool) error
+	AioRead(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext) error
+	AioWrite(off uint64, bl *types.BufferList, ioc *IOContext, buffered bool) bool
+	Flush() error
+	InvalidateCache(off uint64, len uint64) error
+	Open(path string) error
+	Close()
+}
+
 type BlockDevice struct {
 	// public
 	Cct *types.CephContext
@@ -76,23 +93,7 @@ type BlockDevice struct {
 	rotational   bool
 
 	// virtual function
-	BlockDeviceFunc interface {
-		SupportedBdevLable() bool
-		IsRotational() bool
-		AioSubmit(ioc *IOContext)
-		GetSize() uint64
-		GetBlockSize() uint64
-		CollectMetadata(prefix string, pm *map[string]string) error
-		Read(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext, buffered bool) error
-		ReadRandom(off uint64, len uint64, buf string, buffered bool) error
-		Write(off uint64, bl *types.BufferList, buffered bool) error
-		AioRead(off uint64, len uint64, pbl *types.BufferList, ioc *IOContext) error
-		AioWrite(off uint64, bl *types2.List, ioc *IOContext, buffered bool) bool
-		Flush() error
-		InvalidateCache(off uint64, len uint64) error
-		Open(path string) error
-		Close()
-	}
+	BlockDeviceFunc
 }
 
 func (bd *BlockDevice) New(cct *types.CephContext) {

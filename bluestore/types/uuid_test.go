@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -16,6 +17,10 @@ const (
 	third
 	forth
 )
+
+func setNew(aa *string) {
+	*aa = "123"
+}
 
 func TestUuidD_IsZero(t *testing.T) {
 	assert := assert.New(t)
@@ -45,4 +50,25 @@ func TestUuidD_IsZero(t *testing.T) {
 
 	s = strings.Compare(dd, cc)
 	assert.Equal(1, s)
+
+	setNew(&cc)
+	assert.Equal("123", cc)
+
+	//for i := 0; i < len(cc); i++ {
+	//	m := cc[i]
+	//	m ^= uint8(2)
+	//	fmt.Println(m)
+	//}
+	Netw(&cc, dd, 2)
+	fmt.Println(cc)
+}
+
+func Netw(data *string, sts string, ll int) {
+	//for i := 0; i < ll; i++ {
+	//	(*data)[i] ^= sts[i]
+	//}
+	//*data = "ccc"
+	r := []rune(*data)
+	r[1] = 'f'
+	*data = string(r)
 }

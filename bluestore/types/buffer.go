@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-bluestore/common"
 	"github.com/go-bluestore/utils"
@@ -167,7 +168,10 @@ func (bl *BufferList) Decode(data []byte, r *Raw) {
 	r.data = data
 }
 
-func (bl *BufferList) Encode(data []byte) {
+func (bl *BufferList) Encode(item interface{}) {
+	data, err := json.Marshal(item)
+	utils.AssertTrue(nil == err)
+	bl.Add(data, uint64(len(data)))
 }
 
 func (bl *BufferList) SubstrOf(other *BufferList, off uint64, len uint64) {

@@ -115,6 +115,19 @@ func TestMD5(t *testing.T) {
 	assert.Equal(uint32(4041457148), cc)
 }
 
+type A struct {
+	aa int
+}
+
+func (a *A) Add(b int) {
+	a.aa += b
+}
+
+type B struct {
+	*A
+	bb int
+}
+
 func TestTrimLastSpace(t *testing.T) {
 	assert := assert.New(t)
 
@@ -123,4 +136,12 @@ func TestTrimLastSpace(t *testing.T) {
 	ss := TrimLastSpace(bb)
 	assert.Equal("\t \n s \n fs\td", ss)
 
+	a := &A{aa: 3}
+	b := &B{
+		A:  a,
+		bb: 4,
+	}
+
+	b.Add(4)
+	assert.Equal(8, b.bb)
 }

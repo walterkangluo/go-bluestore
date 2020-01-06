@@ -5,7 +5,7 @@ import (
 	"github.com/go-bluestore/bluestore/blockdevice"
 	"github.com/go-bluestore/bluestore/bluefs"
 	fm "github.com/go-bluestore/bluestore/freeListManager"
-	"github.com/go-bluestore/bluestore/kv/keyvalue_db"
+	"github.com/go-bluestore/bluestore/kv"
 	"github.com/go-bluestore/bluestore/types"
 	"github.com/go-bluestore/lib/thread_pool"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -173,8 +173,8 @@ type TransContext struct {
 }
 
 type Extents struct {
-	start  uint64
-	length uint64
+	Start  uint64
+	Length uint64
 }
 
 type BlueStore struct {
@@ -194,9 +194,9 @@ type BlueStore struct {
 	blueFsLastBalance              timestamp.Timestamp
 	nextDumpOnBlueFsBalanceFailure timestamp.Timestamp
 
-	db           keyvalue_db.KeyValueDBI
+	db           *kv.KeyValueDB
 	bdev         *blockdevice.BlockDevice
-	freeListType string
+	freelistType string
 	fm           *fm.FreelistManager
 	alloc        *allocator.Allocator
 	fsId         types.UUID
